@@ -1,6 +1,9 @@
 Aeskulap - OpenSource DICOM Viewer
 ----------------------------------
 
+
+> **This repo now also contains a 2026 web rewrite in [`web/`](web/README.md)** — React/TypeScript + Cornerstone3D. The original 2005 C++ sources are kept below for reference.
+
 http://aeskulap.nongnu.org
 
 
