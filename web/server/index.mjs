@@ -258,4 +258,7 @@ if (fs.existsSync(path.join(DIST, 'index.html'))) {
 }
 
 const PORT = Number(process.env.AESKULAP_PORT || 5174);
-app.listen(PORT, () => console.log(`aeskulap-store listening on http://localhost:${PORT} (data: ${DATA_DIR})`));
+const HOST = process.env.AESKULAP_HOST || '0.0.0.0';
+app.listen(PORT, HOST, () =>
+  console.log(`aeskulap-store listening on http://${HOST}:${PORT} (data: ${DATA_DIR})`)
+);
