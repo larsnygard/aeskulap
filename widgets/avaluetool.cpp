@@ -3,7 +3,7 @@
 namespace Aeskulap {
 	
 ValueTool::ValueTool(StudyView& studyview) : FloatWidget(studyview, 100 , 30) {
-	m_label = manage(new Gtk::Label);
+	m_label = Gtk::manage(new Gtk::Label);
 	add(*m_label);
 
 	m_label->show();

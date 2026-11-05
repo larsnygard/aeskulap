@@ -2,7 +2,7 @@
 #define AESKULAP_PRESCANDIALOG_H
 
 #include <gtkmm.h>
-#include <libglademm/xml.h>
+#include "glade_compat.h"
 
 class PrescanDialog : public Gtk::Window {
 public:

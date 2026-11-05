@@ -28,6 +28,11 @@
     Status:           $State: Exp $
 */
 
+#include <gtkmm.h>
+#include <gdk/gdk.h>
+#include <gdkmm.h>
+#include <gdk/gdkkeysyms.h>
+
 #include "aseriesmenu.h"
 #include "poolseries.h"
 #include "poolinstance.h"
@@ -49,11 +54,9 @@ void SeriesMenu::add_series(const Glib::RefPtr<ImagePool::Series>& series, Serie
 		
 	}
 
-	Gtk::ImageMenuItem* menuitem = manage(new Gtk::ImageMenuItem(buffer, true));
+	Gtk::ImageMenuItem* menuitem = Gtk::manage(new Gtk::ImageMenuItem(buffer, true));
 	add(*menuitem);
 	menuitem->show();
-	int key = GDK_a + m_menuitem.size();
-	Gtk::AccelGroup::activate(*menuitem, key, Gdk::CONTROL_MASK);
 	m_menuitem[series->seriesinstanceuid()] = menuitem;
 	m_views[series->seriesinstanceuid()] = w;
 }
@@ -72,7 +75,7 @@ void SeriesMenu::set_thumbnail(const Glib::RefPtr<ImagePool::Instance>& instance
 		return;
 	}
 
-	Aeskulap::SimpleDisplay* image = manage(new Aeskulap::SimpleDisplay);
+	Aeskulap::SimpleDisplay* image = Gtk::manage(new Aeskulap::SimpleDisplay);
 	image->set_image(instance);
 	menuitem->set_image(*image);
 	return;
@@ -92,10 +95,9 @@ void SeriesMenu::set_connection(const Glib::RefPtr<ImagePool::Series>& series, c
 }
 
 bool SeriesMenu::get_index(const Gtk::MenuItem& item, int& index) {
-	Gtk::Menu_Helpers::MenuList::iterator i = items().begin();
 	index = 0;
-	for(; i != items().end(); i++) {
-		if(i->gobj() == item.gobj()) {
+	for(auto* child : get_children()) {
+		if(child == &item) {
 			return true;
 		}
 		index++;

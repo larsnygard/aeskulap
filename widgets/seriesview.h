@@ -85,7 +85,7 @@ public:
 
 	sigc::signal<void, SeriesView*, bool> signal_selected;
 
-	sigc::signal<void, SeriesView*, Aeskulap::Display*, const Glib::RefPtr<Gdk::Window>&, const Glib::RefPtr<Gdk::GC>&> signal_draw;
+	sigc::signal<void, SeriesView*, Aeskulap::Display*, const Cairo::RefPtr<Cairo::Context>&> signal_draw;
 
 	sigc::signal<void, SeriesView*> signal_update;
 
@@ -123,7 +123,7 @@ protected:
 
 	bool on_timeout(int timer);
 
-	void on_draw_instance(Aeskulap::Display* d, const Glib::RefPtr<Gdk::Window>& w, const Glib::RefPtr<Gdk::GC>& gc);
+	void on_draw_instance(Aeskulap::Display* d, const Cairo::RefPtr<Cairo::Context>& cr);
 
 	void on_doubleclick(Aeskulap::Display* d);
 

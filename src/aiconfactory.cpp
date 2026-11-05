@@ -32,18 +32,22 @@
 #include "astockids.h"
 #include "binreloc.h"
 
+#include "config.h"
+#include <gdk/gdkkeysyms-compat.h>
+#include <gdk/gdkcairo.h>
+
 #include <iostream>
 
 namespace Aeskulap {
 
-Gdk::Cursor* IconFactory::m_cursor_watch = NULL;
+Glib::RefPtr<Gdk::Cursor> IconFactory::m_cursor_watch;
 std::string IconFactory::m_datadir;
 std::string IconFactory::m_imagesdir;
 std::map< std::string, Glib::RefPtr<Gdk::Pixbuf> > IconFactory::m_imagemap;
 
 IconFactory::IconFactory() {
-	if(m_cursor_watch == NULL) {
-		m_cursor_watch = new Gdk::Cursor(Gdk::WATCH);
+	if(!m_cursor_watch) {
+		m_cursor_watch = Glib::wrap(gdk_cursor_new_from_name(Gdk::Display::get_default()->gobj(), "watch"));
 	}
 
 	if(m_datadir.empty()) {
@@ -76,13 +80,8 @@ IconFactory::IconFactory() {
 }
 
 IconFactory::~IconFactory() {
-	std::vector<Gtk::IconSet*>::iterator i = m_iconset.begin();
-	for( ; i!= m_iconset.end(); i++) {
-		delete (*i);
-	}
 	m_iconset.clear();
 	Gtk::IconFactory::remove_default();
-	delete m_cursor_watch;
 }
 
 void IconFactory::add(const Gtk::StockID& stock_id, const std::string& filename) {
@@ -91,9 +90,9 @@ void IconFactory::add(const Gtk::StockID& stock_id, const std::string& filename)
 		std::cerr << "unable to load file " << filename << std::endl;
 		return;
 	}
-	Gtk::IconSet* set = new Gtk::IconSet(pixbuf);
+	Glib::RefPtr<Gtk::IconSet> set = Gtk::IconSet::create(pixbuf);
 	m_iconset.push_back(set);
-	Gtk::IconFactory::add(stock_id, *set);
+	Gtk::IconFactory::add(stock_id, set);
 }
 	
 Glib::RefPtr<Gdk::Pixbuf> IconFactory::load_from_file(const std::string& filename) {
@@ -127,8 +126,8 @@ Glib::RefPtr<Gdk::Pixbuf> IconFactory::load_from_file(const std::string& filenam
 	return pixbuf;
 }
 
-Gdk::Cursor& IconFactory::get_cursor_watch() {
-	return *m_cursor_watch;
+Glib::RefPtr<Gdk::Cursor>& IconFactory::get_cursor_watch() {
+	return m_cursor_watch;
 }
 
 } // namespace Aeskulap

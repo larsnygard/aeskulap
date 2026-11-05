@@ -34,8 +34,7 @@ namespace ImagePool {
 
 extern Network net;
 
-ServerList ServerList::m_serverlist;
-std::set< std::string > ServerList::m_servergroups;
+
 
 
 Server::Server() {
@@ -81,7 +80,7 @@ Glib::RefPtr<ImagePool::ServerList> ServerList::get(const std::string groupfilte
 	update();
 
 	ImagePool::ServerList* list = new ServerList;
-	for(ServerList::iterator i = m_serverlist.begin(); i != m_serverlist.end(); i++) {
+	for(ServerList::iterator i = instance().begin(); i != instance().end(); i++) {
 		// no filter -> all servers
 		if(groupfilter.empty()) {
 			(*list)[i->first] = i->second;
@@ -95,8 +94,8 @@ Glib::RefPtr<ImagePool::ServerList> ServerList::get(const std::string groupfilte
 }
 
 ImagePool::Server* ServerList::find_server(const std::string& name) {
-	ServerList::iterator i = m_serverlist.find(name);
-	if(i == m_serverlist.end()) {
+	ServerList::iterator i = instance().find(name);
+	if(i == instance().end()) {
 		return NULL;
 	}
 	
@@ -104,7 +103,7 @@ ImagePool::Server* ServerList::find_server(const std::string& name) {
 }
 
 void ServerList::update() {
-	m_serverlist.clear();
+	instance().clear();
 
 	Aeskulap::Configuration& conf = Aeskulap::Configuration::get_instance();
 	Aeskulap::Configuration::ServerList::iterator i;
@@ -112,7 +111,7 @@ void ServerList::update() {
 
 	for(i = list->begin(); i != list->end(); i++) {
 
-		Server& s = m_serverlist[i->second.m_name];
+		Server& s = instance()[i->second.m_name];
 		s.m_aet = i->second.m_aet;
 		s.m_port = i->second.m_port;
 		s.m_hostname = i->second.m_hostname;
@@ -128,14 +127,14 @@ void ServerList::update() {
 const std::set<std::string>& ServerList::get_groups() {
 	update();
 
-	m_servergroups.clear();
-	for(ServerList::iterator i = m_serverlist.begin(); i != m_serverlist.end(); i++) {
+	groups().clear();
+	for(ServerList::iterator i = instance().begin(); i != instance().end(); i++) {
 		if(!i->second.m_group.empty()) {
-			m_servergroups.insert(i->second.m_group);
+			groups().insert(i->second.m_group);
 		}
 	}
 
-	return m_servergroups;
+	return groups();
 }
 
 } // namespace ImagePool

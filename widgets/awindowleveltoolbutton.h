@@ -84,7 +84,6 @@ protected:
 	
 	Glib::ustring m_modality;
 
-	Gtk::Tooltips m_tooltips;
 
 	Gtk::ToggleToolButton* m_invert;
 

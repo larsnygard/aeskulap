@@ -32,7 +32,7 @@
 #define AESKULAP_SETTINGS_H
 
 #include <gtkmm.h>
-#include <libglademm/xml.h>
+#include "glade_compat.h"
 
 #include "aconfigclient.h"
 
@@ -79,6 +79,12 @@ protected:
 
 	void store_windowlevel_preset();
 
+	class GroupColumnRecord : public Gtk::TreeModel::ColumnRecord {
+	public:
+		GroupColumnRecord() { add(m_text); }
+		Gtk::TreeModelColumn<Glib::ustring> m_text;
+	};
+
 	class ModelColumns : public Gtk::TreeModel::ColumnRecord {
 	public:
 	
@@ -105,7 +111,7 @@ protected:
 
 	Glib::RefPtr< Gtk::ListStore > m_refTreeModel;
 
-	Gtk::TreeView* m_list_servers;
+	Gtk::TreeView* m_list_servers = nullptr;
 
 	class WindowLevelColumns : public Gtk::TreeModel::ColumnRecord {
 	public:
@@ -129,43 +135,46 @@ private:
 
 	// dicom settings
 	
-	Gtk::Entry* m_local_aet;
+	Gtk::Entry* m_local_aet = nullptr;
 
-	Gtk::Entry* m_local_port;
+	Gtk::Entry* m_local_port = nullptr;
 
 	// server details
 	
-	Gtk::Entry* m_server_detail_server;
+	Gtk::Entry* m_server_detail_server = nullptr;
 	
-	Gtk::Entry* m_server_detail_aet;
+	Gtk::Entry* m_server_detail_aet = nullptr;
 	
-	Gtk::Entry* m_server_detail_port;
+	Gtk::Entry* m_server_detail_port = nullptr;
 	
-	Gtk::ComboBoxEntry* m_server_detail_group;
+	Gtk::ComboBox* m_server_detail_group = nullptr;
+	GroupColumnRecord m_GroupColumns;
+	Glib::RefPtr<Gtk::ListStore> m_group_model;
+	void set_combo_text(Gtk::ComboBox* combo, const Glib::ustring& text);
 	
-	Gtk::ComboBoxText* m_characterset;
+	Gtk::ComboBoxText* m_characterset = nullptr;
 
-	Gtk::Entry* m_server_detail_description;
+	Gtk::Entry* m_server_detail_description = nullptr;
 
-	Gtk::Button* m_server_detail_echo;
+	Gtk::Button* m_server_detail_echo = nullptr;
 	
-	Gtk::CheckButton* m_server_detail_lossy;
+	Gtk::CheckButton* m_server_detail_lossy = nullptr;
 
-	Gtk::CheckButton* m_server_detail_relational;
+	Gtk::CheckButton* m_server_detail_relational = nullptr;
 
-	Gtk::Label* m_server_detail_echostatus;
+	Gtk::Label* m_server_detail_echostatus = nullptr;
 
 	// presets
 
-	Gtk::ComboBox* m_presets_windowlevels_modality;
+	Gtk::ComboBox* m_presets_windowlevels_modality = nullptr;
 
-	Gtk::TreeView* m_presets_windowlevels;
+	Gtk::TreeView* m_presets_windowlevels = nullptr;
 
 	Glib::ustring m_windowlevels_modality;
 
 	// main buttons
 	
-	Gtk::Button* m_settings_ok;
+	Gtk::Button* m_settings_ok = nullptr;
 
 
 	Glib::RefPtr<Gnome::Glade::Xml> m_refGlade;

@@ -44,30 +44,31 @@ StudyTab::StudyTab(const Glib::RefPtr<ImagePool::Study>& study, StudyView* view)
 	
 	std::string labeltext = m_study->patientsname().substr(0,20);
 
-	m_label = manage(new Gtk::Label(labeltext, Gtk::ALIGN_LEFT));
+	m_label = Gtk::manage(new Gtk::Label(labeltext));
+	m_label->set_xalign(0.0);
 	m_label->set_padding(2,0);
 	m_label->show();
 
-	m_progress = manage(new Gtk::ProgressBar);
+	m_progress = Gtk::manage(new Gtk::ProgressBar);
 	m_progress->set_fraction(0);
 	m_progress->set_size_request(-1, 14);
 	m_progress->show();
 
-	Gtk::Image* image_left = manage(new Gtk::Image(Gtk::Stock::DND_MULTIPLE, Gtk::ICON_SIZE_LARGE_TOOLBAR));
+	Gtk::Image* image_left = Gtk::manage(new Gtk::Image(Gtk::Stock::DND_MULTIPLE, Gtk::ICON_SIZE_LARGE_TOOLBAR));
 	image_left->set_padding(2,0);
 	image_left->show();
 
-	Gtk::Image* image_close = manage(new Gtk::Image(Gtk::Stock::CLOSE, Gtk::ICON_SIZE_MENU));
+	Gtk::Image* image_close = Gtk::manage(new Gtk::Image(Gtk::Stock::CLOSE, Gtk::ICON_SIZE_MENU));
 	image_close->show();
 
-	m_close = manage(new Gtk::ToolButton(*image_close));
-	m_close->set_tooltip(m_tooltips, gettext("Close study"));
+	m_close = Gtk::manage(new Gtk::ToolButton(*image_close));
+	m_close->set_tooltip_text(gettext("Close study"));
 	m_close->set_size_request(22, 22);
 	m_close->signal_clicked().connect(sigc::bind(signal_close, view));
 	m_close->set_sensitive(false);
 	m_close->hide();
 
-	Gtk::VBox* vbox = manage(new Gtk::VBox);
+	Gtk::VBox* vbox = Gtk::manage(new Gtk::VBox);
 	vbox->show();
 
 	vbox->pack_start(*m_label);

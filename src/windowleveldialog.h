@@ -20,26 +20,19 @@
 
     Alexander Pipelka
     pipelka@teleweb.at
-
-    Last Update:      $Author: braindead $
-    Update Date:      $Date: 2006/03/05 19:37:28 $
-    Source File:      $Source: /cvsroot/aeskulap/aeskulap/src/windowleveldialog.h,v $
-    CVS/RCS Revision: $Revision: 1.1 $
-    Status:           $State: Exp $
 */
 
 #ifndef AESKULAP_WINDOWLEVELDIALOG_H
 #define AESKULAP_WINDOWLEVELDIALOG_H
 
 #include <gtkmm.h>
-#include <libglademm/xml.h>
 
 #include "awindowlevel.h"
 
 class WindowLevelDialog : public Gtk::Dialog {
 public:
 
-	WindowLevelDialog(BaseObjectType* cobject, const Glib::RefPtr<Gnome::Glade::Xml>& refGlade);
+	WindowLevelDialog();
 	
 	~WindowLevelDialog();
 
@@ -49,17 +42,13 @@ public:
 	
 protected:
 
-	Gtk::Entry* m_description;
+	Gtk::Entry m_description;
 
-	Gtk::Entry* m_modality;
+	Gtk::Entry m_modality;
 
-	Gtk::SpinButton* m_center;
+	Gtk::SpinButton m_center;
 
-	Gtk::SpinButton* m_width;
-
-private:
-
-	Glib::RefPtr<Gnome::Glade::Xml> m_refGlade;
+	Gtk::SpinButton m_width;
 
 };
 

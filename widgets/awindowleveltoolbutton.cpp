@@ -9,9 +9,9 @@ namespace Aeskulap {
 std::set<WindowLevelToolButton*> WindowLevelToolButton::m_widgetlist;
 
 WindowLevelToolButton::WindowLevelToolButton() {
-	Gtk::HBox* hbox = manage(new Gtk::HBox);
+	Gtk::HBox* hbox = Gtk::manage(new Gtk::HBox);
 
-	Gtk::Image* image = manage(new Gtk::Image);
+	Gtk::Image* image = Gtk::manage(new Gtk::Image);
 	Glib::RefPtr<Gdk::Pixbuf> p = Aeskulap::IconFactory::load_from_file("cursor_windowlevel.png");
 	if(p) {
 		image->set(p);
@@ -19,23 +19,23 @@ WindowLevelToolButton::WindowLevelToolButton() {
 	image->show();
 	//image->set_padding(6, 0);
 
-	m_invert = manage(new Gtk::ToggleToolButton(*image));
+	m_invert = Gtk::manage(new Gtk::ToggleToolButton(*image));
 	m_invert->set_size_request(32, 32);
-	m_invert->set_tooltip(m_tooltips, gettext("Invert windowlevel"));
+	m_invert->set_tooltip_text(gettext("Invert windowlevel"));
 	m_invert->show();
 	m_invert->signal_toggled().connect(sigc::mem_fun(*this, &WindowLevelToolButton::on_invert));
 
-	Gtk::VBox* vbox = manage(new Gtk::VBox);
+	Gtk::VBox* vbox = Gtk::manage(new Gtk::VBox);
 
 	vbox->pack_start(*m_invert, true, false);
 	vbox->show();
 
 	hbox->pack_start(*vbox, Gtk::PACK_SHRINK);
 
-	vbox = manage(new Gtk::VBox);
+	vbox = Gtk::manage(new Gtk::VBox);
 	vbox->show();
 
-	m_combo = manage(new Gtk::ComboBoxText);
+	m_combo = Gtk::manage(new Gtk::ComboBoxText);
 	m_combo->set_size_request(-1, 32);
 	m_combo->show();
 	m_combo->signal_changed().connect(sigc::mem_fun(*this, &WindowLevelToolButton::on_changed));
@@ -44,15 +44,15 @@ WindowLevelToolButton::WindowLevelToolButton() {
 
 	hbox->pack_start(*vbox, Gtk::PACK_SHRINK);
 
-	vbox = manage(new Gtk::VBox);
+	vbox = Gtk::manage(new Gtk::VBox);
 	vbox->show();
 
-	image = manage(new Gtk::Image(Gtk::Stock::ADD, Gtk::ICON_SIZE_SMALL_TOOLBAR));
+	image = Gtk::manage(new Gtk::Image(Gtk::Stock::ADD, Gtk::ICON_SIZE_SMALL_TOOLBAR));
 	image->show();
 
-	Gtk::ToolButton* btn = manage(new Gtk::ToolButton(*image));
+	Gtk::ToolButton* btn = Gtk::manage(new Gtk::ToolButton(*image));
 	btn->set_size_request(32, 32);
-	btn->set_tooltip(m_tooltips, gettext("Add new windowlevel preset"));
+	btn->set_tooltip_text(gettext("Add new windowlevel preset"));
 	btn->show();
 	btn->signal_clicked().connect(sigc::mem_fun(*this, &WindowLevelToolButton::on_add));
 
@@ -93,11 +93,11 @@ void WindowLevelToolButton::update() {
 	Aeskulap::WindowLevelList::iterator i;
 
 	for(i = m_list.begin(); i != m_list.end(); i++) {
-		m_combo->append_text(i->first);
+		m_combo->append(i->first);
 	}
 
-	m_combo->append_text(gettext("Default"));
-	m_combo->append_text(gettext("Custom"));
+	m_combo->append(gettext("Default"));
+	m_combo->append(gettext("Custom"));
 
 	if(a.empty()) {
 		m_combo->set_active_text(gettext("Default"));

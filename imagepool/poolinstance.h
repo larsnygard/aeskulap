@@ -45,14 +45,20 @@ class Series;
 class Study;
 class Loader;
 
+class Instance;
+
+// Declared at namespace scope so the friend declaration below is valid
+// (modern GCC requires it; 2005 GCC tolerated the inline form).
+void remove_instance(const Glib::RefPtr<Instance>&);
+
 class Instance : public Glib::Object {
 protected:
 
 	Instance(const std::string& sopinstanceuid);
 
-	friend void ImagePool::remove_instance(const Glib::RefPtr<ImagePool::Instance>&);
+	friend void remove_instance(const Glib::RefPtr<Instance>&);
 
-	friend class ImagePool::Loader;
+	friend class Loader;
 
 public:
 

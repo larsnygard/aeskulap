@@ -32,6 +32,9 @@
 #define AESKULAP_SIMPLEDISPLAY_H
 
 #include <gtkmm.h>
+#include <gdk/gdk.h>
+#include <gdk/gdkcairo.h>
+#include <pango/pangocairo.h>
 #include <gdkmm/pixbuf.h>
 #include <gdkmm/event.h>
 #include <glibmm/refptr.h>
@@ -41,6 +44,10 @@
 #include "displayparameters.h"
 
 namespace Aeskulap {
+
+inline void set_cairo_color(const Cairo::RefPtr<Cairo::Context>& cr, const Gdk::Color& c) {
+	cr->set_source_rgb(c.get_red() / 65535.0, c.get_green() / 65535.0, c.get_blue() / 65535.0);
+}
 
 class SimpleDisplay : public Gtk::EventBox {
 public:
@@ -119,7 +126,9 @@ protected:
 	
 	void on_size_allocate(Gtk::Allocation& allocation);
 
-	bool on_expose_event(GdkEventExpose* event);
+	bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
+
+	virtual void on_draw_overlay(const Cairo::RefPtr<Cairo::Context>& cr);
 
 	bool on_next_frame();
 
@@ -173,15 +182,11 @@ protected:
 
 	Glib::RefPtr<DisplayParameters> m_disp_params;
 
-	Glib::RefPtr<Gdk::GC> m_GC;
-
 	Glib::RefPtr<Gdk::Pixbuf> m_pixbuf;
 	
 	Glib::RefPtr<Pango::Context> m_pangoctx;
 
 	Glib::RefPtr<Gdk::Window> m_window;
-
-	Glib::RefPtr<Gdk::Colormap> m_colormap;
 
 	Gdk::Color m_colorBackground;
 	

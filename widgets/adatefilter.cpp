@@ -40,40 +40,40 @@ DateFilter::DateFilter() {
 	set_spacing(12);
 
 	// filtertype button
-	m_filter_type = manage(new Gtk::ComboBoxText);
-	m_filter_type->append_text(gettext("None"));
-	m_filter_type->append_text(gettext("Today"));
-	m_filter_type->append_text(gettext("Yesterday"));
-	m_filter_type->append_text(gettext("Date"));
-	m_filter_type->append_text(gettext("Range"));
+	m_filter_type = Gtk::manage(new Gtk::ComboBoxText);
+	m_filter_type->append(gettext("None"));
+	m_filter_type->append(gettext("Today"));
+	m_filter_type->append(gettext("Yesterday"));
+	m_filter_type->append(gettext("Date"));
+	m_filter_type->append(gettext("Range"));
 	m_filter_type->set_active_text(gettext("None"));
 	m_filter_type->signal_changed().connect(sigc::mem_fun(*this, &DateFilter::on_filtertype_changed));
 	m_filter_type->show();
 
 	// date selection
-	m_filter_date = manage(new Gtk::HBox);
+	m_filter_date = Gtk::manage(new Gtk::HBox);
 
-	m_filter_popup_from = manage(new Gtk::Button);
+	m_filter_popup_from = Gtk::manage(new Gtk::Button);
 	m_filter_popup_from->signal_clicked().connect(sigc::bind(sigc::mem_fun(*this, &DateFilter::on_select_date), true));
 	m_filter_popup_from->show();
 
 	m_filter_date->pack_start(*m_filter_popup_from, Gtk::PACK_SHRINK);
 
 	// date range
-	m_filter_range = manage(new Gtk::HBox);
+	m_filter_range = Gtk::manage(new Gtk::HBox);
 
-	m_filter_popup_to = manage(new Gtk::Button);
+	m_filter_popup_to = Gtk::manage(new Gtk::Button);
 	m_filter_popup_to->signal_clicked().connect(sigc::bind(sigc::mem_fun(*this, &DateFilter::on_select_date), false));
 	m_filter_popup_to->show();
 
-	Gtk::Label* label = manage(new Gtk::Label("-"));
+	Gtk::Label* label = Gtk::manage(new Gtk::Label("-"));
 	label->set_padding(12,0);
 	label->show();
 	m_filter_range->pack_start(*label, Gtk::PACK_SHRINK);
 	m_filter_range->pack_start(*m_filter_popup_to, Gtk::PACK_SHRINK);
 
 	// container for date/range selection
-	Gtk::HBox* type_container = manage(new Gtk::HBox);
+	Gtk::HBox* type_container = Gtk::manage(new Gtk::HBox);
 	type_container->pack_start(*m_filter_date, Gtk::PACK_SHRINK);
 	type_container->pack_start(*m_filter_range, Gtk::PACK_SHRINK);
 	type_container->show();

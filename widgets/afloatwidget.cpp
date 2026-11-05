@@ -16,7 +16,12 @@ m_height(height) {
 	set_skip_taskbar_hint(true);
 	set_skip_pager_hint(true);
 	set_type_hint(Gdk::WINDOW_TYPE_HINT_UTILITY);
-	reparent(parent);
+	// gtkmm3: no widget reparenting; keep a borderless utility window and
+	// track the parent in root coordinates instead.
+	if(Gtk::Window* top = dynamic_cast<Gtk::Window*>(parent.get_toplevel())) {
+		set_transient_for(*top);
+	}
+	set_accept_focus(false);
 	
 	m_widgetlist.insert(this);
 }
@@ -39,7 +44,6 @@ void FloatWidget::on_hide() {
 
 void FloatWidget::on_realize() {
 	Gtk::Window::on_realize();
-	get_window()->reparent(m_parent->get_window(), 0, 0);
 }
 
 bool FloatWidget::on_timeout(int timer) {
@@ -55,19 +59,22 @@ bool FloatWidget::on_timeout(int timer) {
 		return true;
 	}
 
-	if(!m_parent->is_visible() || !m_parent->is_realized()) {
+	if(!m_parent->is_visible() || !m_parent->get_realized()) {
 		return true;
 	}
 		
-	m_parent->get_pointer(x, y);
-	//get_position(x, y);
-	/*get_pointer(x1, y1);
+	// translate parent-relative pointer position to root window coordinates
+	int ox = 0, oy = 0;
+	Gtk::Window* top = dynamic_cast<Gtk::Window*>(m_parent->get_toplevel());
+	if(top && top->get_realized()) {
+		top->get_position(ox, oy);
+	}
+	Gtk::Allocation alloc = m_parent->get_allocation();
+	ox += alloc.get_x();
+	oy += alloc.get_y();
 
-	x += x1;
-	y += y1;*/
-
-	x += 16;
-	y += 16;
+	x += ox + 16;
+	y += oy + 16;
 
 	if(x != last_x || y != last_y) {
 		move(x, y);

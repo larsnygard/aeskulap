@@ -96,20 +96,14 @@ void SimpleDisplay::on_realize() {
 	Gtk::EventBox::on_realize();
 
 	m_window = get_window();
-	m_window->set_back_pixmap(Glib::RefPtr<Gdk::Pixmap>(0), false);
-
-	m_colormap = get_default_colormap();
 
 	m_colorBackground = Gdk::Color("black");
-	m_colormap->alloc_color(m_colorBackground);
-
-	m_GC = Gdk::GC::create(m_window);
 
 	m_pangoctx = create_pango_context();
 }
 
 void SimpleDisplay::on_unrealize() {
-    m_GC.clear();
+	m_window.clear();
     Gtk::EventBox::on_unrealize();
 }
 
@@ -136,60 +130,34 @@ void SimpleDisplay::on_size_allocate(Gtk::Allocation& allocation) {
 	}
 }
 
-bool SimpleDisplay::on_expose_event(GdkEventExpose* event) {
-	if(!m_GC) {
+bool SimpleDisplay::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
+	if(!m_window) {
 		return false;
 	}
 
-	Gdk::Rectangle rect(1, 1, get_width()-2, get_height()-2);
-	m_GC->set_clip_rectangle(rect);
+	// clip to the client area, 1px frame reserved (as the GC clip did)
+	cr->rectangle(1, 1, get_width()-2, get_height()-2);
+	cr->clip();
 
 	if(m_image) {
-		m_window->draw_pixbuf(
-			m_GC, 
-			m_pixbuf, 
-			event->area.x, 
-			event->area.y, 
-			event->area.x, 
-			event->area.y, 
-			event->area.width, 
-			event->area.height, 
-			Gdk::RGB_DITHER_NONE, 
-			0, 
-			0);
-		
+		gdk_cairo_set_source_pixbuf(cr->cobj(), m_pixbuf->gobj(), 0, 0);
+		cr->paint();
+
 		if(m_image->get_framecount() > 1 && !m_playing) {
 			m_offset_left = m_filmholes_left->get_width() + 5;
 			m_offset_right = m_filmholes_right->get_width() + 5;
+			gdk_cairo_set_source_pixbuf(cr->cobj(), m_filmholes_left->gobj(), 0, 0);
 			for(int y=0; y<(get_height() / m_filmholes_left->get_height())+1; y++) {
-				m_window->draw_pixbuf(
-					m_GC, 
-					m_filmholes_left, 
-					0, 
-					0, 
-					0, 
-					y*m_filmholes_left->get_height(), 
-					m_filmholes_left->get_width(), 
-					m_filmholes_left->get_height(), 
-					Gdk::RGB_DITHER_NONE, 
-					0, 
-					0);
+				cr->paint();
+				cr->translate(0, m_filmholes_left->get_height());
 			}
-
+			cr->set_identity_matrix();
+			gdk_cairo_set_source_pixbuf(cr->cobj(), m_filmholes_right->gobj(), get_width()-m_filmholes_right->get_width(), 0);
 			for(int y=0; y<(get_height() / m_filmholes_right->get_height())+1; y++) {
-				m_window->draw_pixbuf(
-					m_GC, 
-					m_filmholes_right, 
-					0, 
-					0, 
-					get_width()-m_filmholes_right->get_width(), 
-					y*m_filmholes_right->get_height(), 
-					m_filmholes_right->get_width(), 
-					m_filmholes_right->get_height(), 
-					Gdk::RGB_DITHER_NONE, 
-					0, 
-					0);
+				cr->paint();
+				cr->translate(0, m_filmholes_right->get_height());
 			}
+			cr->set_identity_matrix();
 		}
 		else {
 			m_offset_left = 10;
@@ -197,18 +165,17 @@ bool SimpleDisplay::on_expose_event(GdkEventExpose* event) {
 		}
 	}
 	else {
-		m_GC->set_foreground(m_colorBackground);
-		m_GC->set_background(m_colorBackground);
-		m_window->draw_rectangle(
-			m_GC,
-			true,
-			event->area.x, 
-			event->area.y, 
-			event->area.width, 
-			event->area.height);
+		set_cairo_color(cr, m_colorBackground);
+		cr->paint();
 	}
+
+	on_draw_overlay(cr);
 		
 	return true;
+}
+
+void SimpleDisplay::on_draw_overlay(const Cairo::RefPtr<Cairo::Context>&) {
+	// base display paints only the image; Display overrides this
 }
 
 bool SimpleDisplay::set_image(const Glib::RefPtr<ImagePool::Instance>& image, bool smooth) {
@@ -670,13 +637,11 @@ void SimpleDisplay::bitstretch(bool smooth) {
 }
 
 void SimpleDisplay::update() {
-	if(!m_GC) {
+	if(!m_window) {
 		return;
 	}
 
-	Gdk::Rectangle r(0,0,get_width(),get_height());
-	m_window->invalidate_rect(r, false);
-	m_window->process_updates(false);
+	queue_draw();
 }
 
 void SimpleDisplay::refresh(bool smooth) {

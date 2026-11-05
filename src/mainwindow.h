@@ -32,7 +32,7 @@
 #define AESKULAP_MAINWINDOW_H_
 
 #include <gtkmm.h>
-#include <libglademm/xml.h>
+#include "glade_compat.h"
 
 #include "fileloader.h"
 #include "netloader.h"
@@ -90,7 +90,7 @@ protected:
 
 	bool on_windowlevel_add(const Aeskulap::WindowLevel& level);
 
-	void on_switch_page(GtkNotebookPage* page, guint index);
+	void on_switch_page(Gtk::Widget* page, guint index);
 
 private:
 
@@ -102,9 +102,9 @@ private:
 
 	Gtk::CheckMenuItem* m_itemViewFullscreen;
 
-    Gtk::FileFilter m_filter_dicom;
-    Gtk::FileFilter m_filter_any;
-    Gtk::FileFilter m_filter_dicomdir;
+    Glib::RefPtr<Gtk::FileFilter> m_filter_dicom;
+    Glib::RefPtr<Gtk::FileFilter> m_filter_any;
+    Glib::RefPtr<Gtk::FileFilter> m_filter_dicomdir;
 	Gtk::FileChooserDialog m_dialogFile;
 
 	Gtk::CheckButton* m_dialog_check;
@@ -119,7 +119,6 @@ private:
 
 	std::map<std::string, StudyView*> m_studyview;
 
-	Gtk::Tooltips m_tooltips;
 
     ImagePool::DicomdirLoader m_dicomdirloader;
 

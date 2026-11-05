@@ -50,17 +50,17 @@ m_refGlade(refGlade) {
 	m_refGlade->get_widget("hbox_characterset",hbox_characterset);
 	
 	m_characterset = manage(new Gtk::ComboBoxText);
-	m_characterset->append_text("ISO_IR 6");
-	m_characterset->append_text("ISO_IR 100");
-	m_characterset->append_text("ISO_IR 101");
-	m_characterset->append_text("ISO_IR 109");
-	m_characterset->append_text("ISO_IR 110");
-	m_characterset->append_text("ISO_IR 144");
-	m_characterset->append_text("ISO_IR 127");
-	m_characterset->append_text("ISO_IR 126");
-	m_characterset->append_text("ISO_IR 138");
-	m_characterset->append_text("ISO_IR 148");
-	m_characterset->append_text("ISO_IR 192");
+	m_characterset->append("ISO_IR 6");
+	m_characterset->append("ISO_IR 100");
+	m_characterset->append("ISO_IR 101");
+	m_characterset->append("ISO_IR 109");
+	m_characterset->append("ISO_IR 110");
+	m_characterset->append("ISO_IR 144");
+	m_characterset->append("ISO_IR 127");
+	m_characterset->append("ISO_IR 126");
+	m_characterset->append("ISO_IR 138");
+	m_characterset->append("ISO_IR 148");
+	m_characterset->append("ISO_IR 192");
 
 	m_characterset->show();
 	hbox_characterset->pack_start(*m_characterset);
@@ -77,7 +77,12 @@ m_refGlade(refGlade) {
 	m_server_detail_port->signal_changed().connect(sigc::mem_fun(*this, &Settings::on_server_apply));
 	
 	m_refGlade->get_widget("server_detail_group", m_server_detail_group);
-	m_server_detail_group->get_entry()->signal_changed().connect(sigc::mem_fun(*this, &Settings::on_server_apply));
+	{
+		m_group_model = Gtk::ListStore::create(m_GroupColumns);
+		m_server_detail_group->set_model(m_group_model);
+		m_server_detail_group->set_entry_text_column(m_GroupColumns.m_text);
+	}
+	m_server_detail_group->signal_changed().connect(sigc::mem_fun(*this, &Settings::on_server_apply));
 
 	m_refGlade->get_widget("server_detail_description", m_server_detail_description);
 	m_server_detail_description->signal_changed().connect(sigc::mem_fun(*this, &Settings::on_server_apply));
@@ -290,6 +295,23 @@ void Settings::on_server_remove() {
 	m_refTreeModel->erase(selection->get_selected());
 }
 
+void Settings::set_combo_text(Gtk::ComboBox* combo, const Glib::ustring& text) {
+	Glib::RefPtr<Gtk::ListStore> m = Glib::RefPtr<Gtk::ListStore>::cast_static(combo->get_model());
+	if(!m) {
+		return;
+	}
+	int i = 0;
+	for(const auto& row : m->children()) {
+		if(row[m_GroupColumns.m_text] == text) {
+			combo->set_active(i);
+			return;
+		}
+		i++;
+	}
+	(*m->append())[m_GroupColumns.m_text] = text;
+	combo->set_active(i);
+}
+
 void Settings::set_server_detail_sensitive(bool sensitive) {
 	m_server_detail_server->set_sensitive(sensitive);
 	m_server_detail_aet->set_sensitive(sensitive);
@@ -304,7 +326,7 @@ void Settings::set_server_detail_sensitive(bool sensitive) {
 		m_server_detail_server->set_text("");		
 		m_server_detail_aet->set_text("");
 		m_server_detail_port->set_text("");
-		m_server_detail_group->get_entry()->set_text("");
+		set_combo_text(m_server_detail_group, "");
 		m_server_detail_description->set_text("");
 		m_server_detail_lossy->set_active(false);
 		m_server_detail_relational->set_active(false);
@@ -329,7 +351,7 @@ void Settings::on_server_activated() {
 	guint i = row[m_Columns.m_port];
 	g_snprintf(buffer, sizeof(buffer), "%i", i);
 	m_server_detail_port->set_text(buffer);
-	m_server_detail_group->get_entry()->set_text(row[m_Columns.m_group]);
+	set_combo_text(m_server_detail_group, row[m_Columns.m_group]);
 	m_server_detail_description->set_text(row[m_Columns.m_name]);
 	m_server_detail_lossy->set_active(row[m_Columns.m_lossy]);
 	m_server_detail_relational->set_active(row[m_Columns.m_relational]);
@@ -338,6 +360,9 @@ void Settings::on_server_activated() {
 }
 
 void Settings::on_server_apply() {
+	if(!m_list_servers) {
+		return;
+	}
 	Glib::RefPtr<Gtk::TreeSelection> refTreeSelection = m_list_servers->get_selection();
 	Gtk::TreeModel::iterator iter = refTreeSelection->get_selected();
 
@@ -357,7 +382,7 @@ void Settings::on_server_apply() {
 		row[m_Columns.m_port] = i;
 	}
 	if(m_server_detail_group->is_sensitive()) {
-		row[m_Columns.m_group] = m_server_detail_group->get_entry()->get_text();
+		row[m_Columns.m_group] = m_server_detail_group->get_entry_text();
 	}
 	if(m_server_detail_description->is_sensitive()) {
 		Glib::ustring desc = m_server_detail_description->get_text();

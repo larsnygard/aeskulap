@@ -157,7 +157,7 @@ void StudyManager::on_filter_search() {
 	ImagePool::query_from_net(
 					m_entry_filter_patientid->get_text(),
 					m_entry_filter_name->get_text(),
-					m_entry_filter_modality->get_entry()->get_text(),
+					m_entry_filter_modality->get_entry_text(),
 					m_datefilter->get_startdate(),
 					m_datefilter->get_enddate(),
 					m_entry_filter_studydescription->get_text(),

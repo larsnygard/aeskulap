@@ -64,8 +64,7 @@ m_netloader(Aeskulap::Configuration::get_instance().get_local_aet())
 		set_icon(icon);
 	}*/
 
-	m_windowlevel = NULL;
-	m_refGlade->get_widget_derived("windowlevel_add", m_windowlevel);
+	m_windowlevel = Gtk::manage(new WindowLevelDialog());
 
 	m_about = NULL;
 	m_refGlade->get_widget_derived("aboutdialog", m_about);
@@ -122,15 +121,19 @@ m_netloader(Aeskulap::Configuration::get_instance().get_local_aet())
 	m_dialogFile.add_button(Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL);
 	m_dialogFile.add_button(Gtk::Stock::OPEN, Gtk::RESPONSE_OK);
 
-	m_filter_dicom.set_name(gettext("DICOM files"));
-	m_filter_dicom.add_pattern("*.dcm");
+	m_filter_dicom = Gtk::FileFilter::create();
+	m_filter_any = Gtk::FileFilter::create();
+	m_filter_dicomdir = Gtk::FileFilter::create();
 
-	m_filter_any.set_name(gettext("Any files"));
-	m_filter_any.add_pattern("*");
+	m_filter_dicom->set_name(gettext("DICOM files"));
+	m_filter_dicom->add_pattern("*.dcm");
 
-	m_filter_dicomdir.set_name(gettext("DICOMDIR files"));
-	m_filter_dicomdir.add_pattern("DICOMDIR");
-	m_filter_dicomdir.add_pattern("dicomdir");
+	m_filter_any->set_name(gettext("Any files"));
+	m_filter_any->add_pattern("*");
+
+	m_filter_dicomdir->set_name(gettext("DICOMDIR files"));
+	m_filter_dicomdir->add_pattern("DICOMDIR");
+	m_filter_dicomdir->add_pattern("dicomdir");
 
 	m_netloader.signal_study_added.connect(sigc::mem_fun(*this, &MainWindow::on_study_added));
 	m_netloader.signal_error.connect(sigc::mem_fun(*this, &MainWindow::on_study_error));
@@ -203,7 +206,9 @@ void MainWindow::on_file_open() {
 		return;
 	}
 
-	load_files(m_dialogFile.get_filenames());
+	std::list<Glib::ustring> files;
+	for(const auto& f : m_dialogFile.get_filenames()) files.push_back(f);
+	load_files(files);
 }
 
 void MainWindow::load_files(std::list< Glib::ustring > list) {
@@ -347,7 +352,7 @@ bool MainWindow::on_windowlevel_add(const Aeskulap::WindowLevel& level) {
 	return true;
 }
 
-void MainWindow::on_switch_page(GtkNotebookPage* page, guint index) {
+void MainWindow::on_switch_page(Gtk::Widget* page, guint index) {
 	std::cerr << "page: " << index << std::endl;
 	if(index == 0) {
 		return;

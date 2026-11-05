@@ -36,11 +36,11 @@ namespace Aeskulap {
 MultiFrameCtrl::MultiFrameCtrl() {
 	m_display = NULL;
 
-	m_play = manage(new Gtk::Button(Gtk::Stock::MEDIA_PLAY));
+	m_play = Gtk::manage(new Gtk::Button(Gtk::Stock::MEDIA_PLAY));
 	m_play->set_focus_on_click(false);
 	m_play->set_use_stock();
 
-	m_position = manage(new Gtk::HScale);
+	m_position = Gtk::manage(new Gtk::HScale);
 	m_position->set_draw_value(false);
 	m_position->set_increments(1.0, 1.0);
 	m_position->signal_change_value().connect(sigc::mem_fun(*this, &MultiFrameCtrl::on_change_value));

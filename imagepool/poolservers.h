@@ -92,9 +92,17 @@ protected:
 
 private:
 
-	static ServerList m_serverlist;
-	
-	static std::set< std::string > m_servergroups;
+	// Meyers singletons: a Glib::Object may not be constructed during
+	// static init, before glibmm's wrap_init() has registered its quark.
+	static ServerList& instance() {
+		static ServerList s;
+		return s;
+	}
+
+	static std::set< std::string >& groups() {
+		static std::set< std::string > s;
+		return s;
+	}
 
 };
 

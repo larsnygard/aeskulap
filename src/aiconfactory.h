@@ -47,7 +47,7 @@ public:
 
 	static Glib::RefPtr<Gdk::Pixbuf> load_from_file(const std::string& filename);
 
-	static Gdk::Cursor& get_cursor_watch();
+	static Glib::RefPtr<Gdk::Cursor>& get_cursor_watch();
 
 protected:
 
@@ -55,13 +55,13 @@ protected:
 
 private:
 
-	std::vector<Gtk::IconSet*> m_iconset;
+	std::vector<Glib::RefPtr<Gtk::IconSet> > m_iconset;
 	
 	static std::string m_datadir;
 	
 	static std::string m_imagesdir;
 	
-	static Gdk::Cursor* m_cursor_watch;
+	static Glib::RefPtr<Gdk::Cursor> m_cursor_watch;
 	
 	static std::map< std::string, Glib::RefPtr<Gdk::Pixbuf> > m_imagemap;
 };

@@ -52,7 +52,6 @@ public:
 
 protected:
 
-	Gtk::Tooltips m_tooltips;
 
 	Gtk::ToolButton* m_close;
 	

@@ -39,7 +39,7 @@
 #include "binreloc.h"
 
 #include <gtkmm.h>
-#include <libglademm/xml.h>
+#include "glade_compat.h"
 
 #include <iostream>
 #include "gettext.h"
@@ -85,10 +85,10 @@ int main(int argc, char* argv[]) {
 	Glib::RefPtr<Gnome::Glade::Xml> refXml;
 
 	try  {
-		refXml = Gnome::Glade::Xml::create(gladedir+"/aeskulap.glade");
+		refXml = Gnome::Glade::Xml::create(gladedir+"/aeskulap.ui");
 	}
 	catch(Gnome::Glade::XmlError) {	
-		refXml = Gnome::Glade::Xml::create("aeskulap.glade");
+		refXml = Gnome::Glade::Xml::create("aeskulap.ui");
 	}
 
 	Aeskulap::IconFactory aeskulap_icons;

@@ -20,45 +20,58 @@
 
     Alexander Pipelka
     pipelka@teleweb.at
-
-    Last Update:      $Author: braindead $
-    Update Date:      $Date: 2006/03/05 19:37:28 $
-    Source File:      $Source: /cvsroot/aeskulap/aeskulap/src/windowleveldialog.cpp,v $
-    CVS/RCS Revision: $Revision: 1.1 $
-    Status:           $State: Exp $
 */
 
 #include "windowleveldialog.h"
 
-WindowLevelDialog::WindowLevelDialog(BaseObjectType* cobject, const Glib::RefPtr<Gnome::Glade::Xml>& refGlade) :
-Gtk::Dialog(cobject),
-m_refGlade(refGlade) {
+WindowLevelDialog::WindowLevelDialog() :
+Gtk::Dialog("Add window level preset") {
 
-	m_refGlade->get_widget("add_windowlevel_description", m_description);
+	Gtk::Table* table = manage(new Gtk::Table(2, 4));
+	table->set_col_spacings(8);
+	table->set_row_spacings(4);
 
-	m_refGlade->get_widget("add_windowlevel_modality", m_modality);
+	table->attach(*(manage(new Gtk::Label("Description", true))), 0, 1, 0, 1,
+	              Gtk::FILL, Gtk::SHRINK, 0, 0);
+	table->attach(m_description, 1, 2, 0, 1);
+	table->attach(*(manage(new Gtk::Label("Modality", true))), 0, 1, 1, 2,
+	              Gtk::FILL, Gtk::SHRINK, 0, 0);
+	table->attach(m_modality, 1, 2, 1, 2);
+	table->attach(*(manage(new Gtk::Label("Center", true))), 0, 1, 2, 3,
+	              Gtk::FILL, Gtk::SHRINK, 0, 0);
+	table->attach(m_center, 1, 2, 2, 3);
+	table->attach(*(manage(new Gtk::Label("Width", true))), 0, 1, 3, 4,
+	              Gtk::FILL, Gtk::SHRINK, 0, 0);
+	table->attach(m_width, 1, 2, 3, 4);
 
-	m_refGlade->get_widget("add_windowlevel_center", m_center);
+	for (Gtk::SpinButton* s : { &m_center, &m_width }) {
+		s->set_adjustment(Gtk::Adjustment::create(0, -32768, 65535, 1, 10));
+		s->set_digits(0);
+	}
 
-	m_refGlade->get_widget("add_windowlevel_width", m_width);
+	add_action_widget(*(manage(new Gtk::Button("Cancel", true))), Gtk::RESPONSE_CANCEL);
+	add_action_widget(*(manage(new Gtk::Button("OK", true))), Gtk::RESPONSE_OK);
+
+	get_content_area()->add(*table);
+	show_all_children();
 }
 
 WindowLevelDialog::~WindowLevelDialog() {
 }
 
 void WindowLevelDialog::set(const Aeskulap::WindowLevel& level) {
-	m_description->set_text(level.description);
-	m_modality->set_text(level.modality);
-	m_center->set_value(level.center);
-	m_width->set_value(level.width);
+	m_description.set_text(level.description);
+	m_modality.set_text(level.modality);
+	m_center.set_value(level.center);
+	m_width.set_value(level.width);
 }
 
 Aeskulap::WindowLevel WindowLevelDialog::get() {
 	Aeskulap::WindowLevel level;
-	level.description = m_description->get_text();
-	level.modality = m_modality->get_text();
-	level.center = m_center->get_value_as_int();
-	level.width = m_width->get_value_as_int();
+	level.description = m_description.get_text();
+	level.modality = m_modality.get_text();
+	level.center = m_center.get_value_as_int();
+	level.width = m_width.get_value_as_int();
 	
 	return level;
 }

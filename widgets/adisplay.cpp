@@ -40,27 +40,24 @@ namespace Aeskulap {
 
 Display::Display() : SimpleDisplay(),
 m_drag_active(false),
-m_cursor_pan(NULL),
-m_cursor_windowlevel(NULL),
-m_cursor_zoom(NULL), 
 m_mouse_functions(true)
 {
 	set_events(Gdk::BUTTON_PRESS_MASK | Gdk::POINTER_MOTION_MASK);
 }
 
-Display::Display(const Glib::RefPtr<DisplayParameters>& params) : SimpleDisplay(params) ,
-m_cursor_pan(NULL),
-m_cursor_windowlevel(NULL),
-m_cursor_zoom(NULL)
+Display::Display(const Glib::RefPtr<DisplayParameters>& params) : SimpleDisplay(params)
 {
 	set_events(Gdk::BUTTON_PRESS_MASK);
 }
 
-Display::~Display() {
-	delete m_cursor_pan;
-	delete m_cursor_windowlevel;
-	delete m_cursor_zoom;
+namespace {
+Glib::RefPtr<Gdk::Cursor> make_pixbuf_cursor(const Glib::RefPtr<Gdk::Pixbuf>& p, int hotx, int hoty) {
+	GdkCursor* c = gdk_cursor_new_from_pixbuf(Gdk::Display::get_default()->gobj(), p->gobj(), hotx, hoty);
+	return Glib::wrap(c);
+}
+}
 
+Display::~Display() {
 }
 
 void Display::on_realize() {
@@ -71,34 +68,22 @@ void Display::on_realize() {
 	Glib::RefPtr<Gdk::Pixbuf> p;
 	p = Aeskulap::IconFactory::load_from_file("cursor_pan.png");
 	if(p) {
-		m_cursor_pan = new Gdk::Cursor(
-						Gdk::Display::get_default(),
-						p,
-						11, 11);
+		m_cursor_pan = make_pixbuf_cursor(p, 11, 11);
 	}
 	
 	p = Aeskulap::IconFactory::load_from_file("cursor_windowlevel.png");
 	if(p) {
-		m_cursor_windowlevel = new Gdk::Cursor(
-						Gdk::Display::get_default(),
-						p,
-						11, 11);
+		m_cursor_windowlevel = make_pixbuf_cursor(p, 11, 11);
 	}
 	
 	p = Aeskulap::IconFactory::load_from_file("cursor_zoom.png");
 	if(p) {
-		m_cursor_zoom = new Gdk::Cursor(
-						Gdk::Display::get_default(),
-						p,
-						11, 11);
+		m_cursor_zoom = make_pixbuf_cursor(p, 11, 11);
 	}
 
 	p = Aeskulap::IconFactory::load_from_file("start-here.png");
 	if(p) {
-		m_cursor_locate = new Gdk::Cursor(
-						Gdk::Display::get_default(),
-						p,
-						8, 8);
+		m_cursor_locate = make_pixbuf_cursor(p, 8, 8);
 	}
 
 	m_changed = false;
@@ -115,13 +100,6 @@ void Display::on_realize() {
 	m_colorReferenceCurrent = Gdk::Color("orange");
 	m_colorReference = Gdk::Color("grey");
 
-	m_colormap->alloc_color(m_colorSelected);
-	m_colormap->alloc_color(m_colorSeriesSelected);
-	m_colormap->alloc_color(m_colorFrame);
-	m_colormap->alloc_color(m_colorText);
-	m_colormap->alloc_color(m_colorReferenceCurrent);
-	m_colormap->alloc_color(m_colorReference);
-
 	m_layoutL = Pango::Layout::create(m_pangoctx);
 	m_layoutL->set_alignment(Pango::ALIGN_LEFT);
 
@@ -132,27 +110,28 @@ void Display::on_realize() {
 	m_layoutB->set_alignment(Pango::ALIGN_LEFT);
 }
 
-bool Display::on_expose_event(GdkEventExpose* event) {
-	if(!SimpleDisplay::on_expose_event(event)) {
-		return false;
-	}
+void Display::on_draw_overlay(const Cairo::RefPtr<Cairo::Context>& cr) {
+	m_cr = cr->cobj();
 
-	m_GC->set_foreground(m_colorFrame);
+	set_cairo_color(cr, m_colorFrame);
 
 	if(m_disp_params && m_disp_params->selected) {
-		m_GC->set_foreground(m_colorSelected);
-		m_window->draw_rectangle(m_GC, false, 2, 2, get_width()-5, get_height()-5);
+		set_cairo_color(cr, m_colorSelected);
+		cr->set_line_width(1.0);
+		cr->rectangle(2.5, 2.5, get_width()-6, get_height()-6);
+		cr->stroke();
 	}
 	else if(m_disp_params && m_disp_params->series_selected) {
-		m_GC->set_foreground(m_colorSeriesSelected);
+		set_cairo_color(cr, m_colorSeriesSelected);
 	}
 
-	m_window->draw_rectangle(m_GC, false, 1, 1, get_width()-3, get_height()-3);
+	cr->set_line_width(1.0);
+	cr->rectangle(1.5, 1.5, get_width()-4, get_height()-4);
+	cr->stroke();
 
 	if(m_image && !m_playing) {
-		m_GC->set_foreground(m_colorText);
+		set_cairo_color(cr, m_colorText);
 	
-		m_GC->set_background(m_colorText);
 		m_fntdesc.set_size((get_width() * 12 * PANGO_SCALE) / 1280 + 2 * PANGO_SCALE);
 		Glib::ustring text = m_image->series()->institutionname() + "\n";
 		text += m_image->study()->patientsname() + "\n";
@@ -189,18 +168,29 @@ bool Display::on_expose_event(GdkEventExpose* event) {
 		int sw = 0;
 		int sh = 0;
 		m_layoutB->get_pixel_size(sw, sh);
-		
-		m_window->draw_layout(m_GC, m_offset_left, 5, m_layoutL);
-		m_window->draw_layout(m_GC, get_width()/2, 5, m_layoutR);
-		m_window->draw_layout(m_GC, m_offset_left, get_height()-5-sh, m_layoutB);
+
+		cr->save();
+		cr->translate(m_offset_left, 5);
+		pango_cairo_show_layout(cr->cobj(), m_layoutL->gobj());
+		cr->restore();
+
+		cr->save();
+		cr->translate(get_width()/2, 5);
+		pango_cairo_show_layout(cr->cobj(), m_layoutR->gobj());
+		cr->restore();
+
+		cr->save();
+		cr->translate(m_offset_left, get_height()-5-sh);
+		pango_cairo_show_layout(cr->cobj(), m_layoutB->gobj());
+		cr->restore();
 
 		draw_ruler_v();
 		draw_ruler_h();
 	}
 
-	signal_draw(this, m_window, m_GC);
+	signal_draw(this, cr);
 
-	return true;
+	m_cr = NULL;
 }
 
 void Display::bitstretch(bool smooth) {
@@ -232,7 +222,7 @@ bool Display::on_button_press_event(GdkEventButton* button) {
 	}
 
 	if(button->button == 1 && button->state & GDK_SHIFT_MASK) {
-		get_window()->set_cursor(*m_cursor_locate);
+		get_window()->set_cursor(m_cursor_locate);
 		m_drag_start_y = button->y;
 		m_drag_button = 1;
 		add_modal_grab();
@@ -245,7 +235,7 @@ bool Display::on_button_press_event(GdkEventButton* button) {
 		m_drag_start_y = button->y;
 		m_drag_window = m_disp_params->window;
 
-		//get_window()->set_cursor(*m_cursor_windowlevel);
+		//get_window()->set_cursor(m_cursor_windowlevel);
 		add_modal_grab();
 		return true;
 	}
@@ -256,7 +246,7 @@ bool Display::on_button_press_event(GdkEventButton* button) {
 		m_drag_start_x = 0;
 		m_drag_start_y = button->y;
 
-		get_window()->set_cursor(*m_cursor_zoom);
+		get_window()->set_cursor(m_cursor_zoom);
 		add_modal_grab();
 		return true;
 	}
@@ -272,7 +262,7 @@ bool Display::on_button_press_event(GdkEventButton* button) {
 			m_drag_start_x = button->x;
 			m_drag_start_y = button->y;
 	
-			get_window()->set_cursor(*m_cursor_pan);
+			get_window()->set_cursor(m_cursor_pan);
 			add_modal_grab();
 			return true;
 		}
@@ -346,7 +336,7 @@ bool Display::on_motion_notify_event(GdkEventMotion* event) {
 		double d = sqrt(pow(x - m_drag_start_x, 2) + pow(y - m_drag_start_y, 2));
 		if(d > 4) {
 			m_drag_active = true;
-			get_window()->set_cursor(*m_cursor_windowlevel);
+			get_window()->set_cursor(m_cursor_windowlevel);
 		}
 	}
 	
@@ -490,7 +480,11 @@ void Display::draw_ruler_v() {
 	
 	int offset = (get_height() - ruler_height) / 2;
 
-	m_window->draw_line(m_GC, get_width()-m_offset_right, offset, get_width()-m_offset_right, offset+ruler_height);
+	if(!m_cr) { return; }
+	cairo_set_line_width(m_cr, 1.0);
+	cairo_move_to(m_cr, get_width()-m_offset_right+0.5, offset);
+	cairo_line_to(m_cr, get_width()-m_offset_right+0.5, offset+ruler_height);
+	cairo_stroke(m_cr);
 	
 	int ym = 0;
 	for(int y=0; y<mm+1; y+=10) {
@@ -501,12 +495,9 @@ void Display::draw_ruler_v() {
 		if(result.rem == 0) {
 			lw = line_width2;
 		}
-		m_window->draw_line(
-			m_GC,
-			get_width()-m_offset_right-lw,
-			offset+ym,
-			get_width()-m_offset_right,
-			offset+ym);
+		cairo_move_to(m_cr, get_width()-m_offset_right-lw+0.5, offset+ym+0.5);
+		cairo_line_to(m_cr, get_width()-m_offset_right+0.5, offset+ym+0.5);
+		cairo_stroke(m_cr);
 	}
 
 	char buffer[10];
@@ -514,7 +505,10 @@ void Display::draw_ruler_v() {
 	m_layoutR->set_text(buffer);
 	m_layoutR->set_width(100 * PANGO_SCALE);
 
-	m_window->draw_layout(m_GC, get_width()-100-m_offset_right, offset + ym + 3, m_layoutR);
+	cairo_save(m_cr);
+	cairo_move_to(m_cr, get_width()-100-m_offset_right, offset + ym + 3);
+	pango_cairo_show_layout(m_cr, m_layoutR->gobj());
+	cairo_restore(m_cr);
 
 }
 
@@ -542,7 +536,11 @@ void Display::draw_ruler_h() {
 	
 	int offset = (get_width() - ruler_width) / 2;
 
-	m_window->draw_line(m_GC, offset, get_height()-10, offset+ruler_width, get_height()-10);
+	if(!m_cr) { return; }
+	cairo_set_line_width(m_cr, 1.0);
+	cairo_move_to(m_cr, offset, get_height()-10+0.5);
+	cairo_line_to(m_cr, offset+ruler_width, get_height()-10+0.5);
+	cairo_stroke(m_cr);
 	
 	int xm = 0;
 	for(int x=0; x<mm+1; x+=10) {
@@ -553,12 +551,9 @@ void Display::draw_ruler_h() {
 		if(result.rem == 0) {
 			lh = line_height2;
 		}
-		m_window->draw_line(
-			m_GC,
-			offset+xm,
-			get_height()-10-lh,
-			offset+xm,
-			get_height()-10);
+		cairo_move_to(m_cr, offset+xm+0.5, get_height()-10-lh+0.5);
+		cairo_line_to(m_cr, offset+xm+0.5, get_height()-10+0.5);
+		cairo_stroke(m_cr);
 	}
 
 	char buffer[10];
@@ -570,7 +565,10 @@ void Display::draw_ruler_h() {
 	int th = 0;
 	m_layoutL->get_pixel_size(tw, th);
 
-	m_window->draw_layout(m_GC, offset + xm + 3, get_height()-10-th, m_layoutL);
+	cairo_save(m_cr);
+	cairo_move_to(m_cr, offset + xm + 3, get_height()-10-th);
+	pango_cairo_show_layout(m_cr, m_layoutL->gobj());
+	cairo_restore(m_cr);
 
 }
 
@@ -606,7 +604,11 @@ void Display::draw_line(const ImagePool::Instance::Point& p0, const ImagePool::I
 		return;
 	}
 
-	m_window->draw_line(m_GC, x0, y0, x1, y1);
+	if(!m_cr) { return; }
+	cairo_set_line_width(m_cr, 1.0);
+	cairo_move_to(m_cr, x0+0.5, y0+0.5);
+	cairo_line_to(m_cr, x1+0.5, y1+0.5);
+	cairo_stroke(m_cr);
 }
 
 void Display::draw_cross(const ImagePool::Instance::Point& p) {
@@ -626,8 +628,13 @@ void Display::draw_cross(const ImagePool::Instance::Point& p) {
 		return;
 	}
 	
-	m_window->draw_line(m_GC, x-5, y, x+5, y);
-	m_window->draw_line(m_GC, x, y-5, x, y+5);
+	if(!m_cr) { return; }
+	cairo_set_line_width(m_cr, 1.0);
+	cairo_move_to(m_cr, x-5+0.5, y+0.5);
+	cairo_line_to(m_cr, x+5+0.5, y+0.5);
+	cairo_move_to(m_cr, x+0.5, y-5+0.5);
+	cairo_line_to(m_cr, x+0.5, y+5+0.5);
+	cairo_stroke(m_cr);
 }
 
 void Display::draw_point(const ImagePool::Instance::Point& p) {
@@ -647,7 +654,10 @@ void Display::draw_point(const ImagePool::Instance::Point& p) {
 		return;
 	}
 	
-	m_window->draw_rectangle(m_GC, false, x-1, y-1, 2, 2);
+	if(!m_cr) { return; }
+	cairo_set_line_width(m_cr, 1.0);
+	cairo_rectangle(m_cr, x-1+0.5, y-1+0.5, 2, 2);
+	cairo_stroke(m_cr);
 }
 
 void Display::enable_mouse_functions(bool enable) {

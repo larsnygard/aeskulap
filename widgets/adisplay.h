@@ -72,7 +72,7 @@ public:
 
 	sigc::signal< void, int, bool > signal_changed;
 
-	sigc::signal<void, Display*, const Glib::RefPtr<Gdk::Window>&, const Glib::RefPtr<Gdk::GC>&> signal_draw;
+	sigc::signal<void, Display*, const Cairo::RefPtr<Cairo::Context>&> signal_draw;
 
 	sigc::signal<void, GdkEventButton*> signal_popup;
 
@@ -88,7 +88,7 @@ protected:
 
 	void on_realize();
 
-	bool on_expose_event(GdkEventExpose* event);
+	void on_draw_overlay(const Cairo::RefPtr<Cairo::Context>& cr);
 
 	bool on_button_press_event(GdkEventButton* button);
 
@@ -120,15 +120,18 @@ protected:
 
 	Pango::FontDescription m_fntdesc;
 
+	// raw cairo context of the current on_draw pass (valid during signal_draw)
+	cairo_t* m_cr = NULL;
+
 	bool m_changed;
 
-	Gdk::Cursor* m_cursor_pan;
+	Glib::RefPtr<Gdk::Cursor> m_cursor_pan;
 
-	Gdk::Cursor* m_cursor_windowlevel;
+	Glib::RefPtr<Gdk::Cursor> m_cursor_windowlevel;
 
-	Gdk::Cursor* m_cursor_zoom;
+	Glib::RefPtr<Gdk::Cursor> m_cursor_zoom;
 
-	Gdk::Cursor* m_cursor_locate;
+	Glib::RefPtr<Gdk::Cursor> m_cursor_locate;
 
 	bool m_mouse_functions;
 

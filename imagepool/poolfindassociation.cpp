@@ -65,7 +65,9 @@ CONDITION FindAssociation::findSCU(T_ASC_Association *assoc, DcmDataset *query) 
 	req.Priority = DIMSE_PRIORITY_LOW;
 	strcpy(req.AffectedSOPClassUID, m_abstractSyntax);
 
-	cond = DIMSE_findUser(assoc, presId, &req, query, 
+	int responseCount = 0;  // required out-param since DCMTK 3.6
+	cond = DIMSE_findUser(assoc, presId, &req, query,
+			responseCount,
 			findCallback, (void*)this, 
 			(m_timeout == 0) ? DIMSE_BLOCKING : DIMSE_NONBLOCKING,
 			m_timeout, 

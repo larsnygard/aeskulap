@@ -2,7 +2,13 @@ Aeskulap - OpenSource DICOM Viewer
 ----------------------------------
 
 
-> **This repo now also contains a 2026 web rewrite in [`web/`](web/README.md)** — React/TypeScript + Cornerstone3D. The original 2005 C++ sources are kept below for reference.
+**Aeskulap 0.2.9 (2026)** — the native C++/gtkmm DICOM viewer and PACS client,
+modernized from the 2005 original: CMake (C++17), gtkmm-3, DCMTK 3.7, Cairo
+rendering. Fast and lightweight to load (~1.3 MB binary, no web stack).
+
+Build:
+
+    cmake -B build && cmake --build build -j && sudo cmake --install build
 
 http://aeskulap.nongnu.org
 

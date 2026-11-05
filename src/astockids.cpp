@@ -29,6 +29,7 @@
 */
 
 #include "astockids.h"
+#include <gdk/gdkkeysyms-compat.h>
 #include "gettext.h"
 
 namespace Aeskulap {

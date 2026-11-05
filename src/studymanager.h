@@ -32,7 +32,7 @@
 #define AESKULAP_STUDYMANAGER_H
 
 #include <gtkmm.h>
-#include <libglademm/xml.h>
+#include "glade_compat.h"
 
 #include "aconfigclient.h"
 #include <map>
@@ -88,7 +88,7 @@ protected:
 
 	Gtk::Entry* m_entry_filter_name;
 
-	Gtk::ComboBoxEntry* m_entry_filter_modality;
+	Gtk::ComboBox* m_entry_filter_modality;
 
 	Gtk::Entry* m_entry_filter_studydescription;
 

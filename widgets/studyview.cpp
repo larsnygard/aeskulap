@@ -29,6 +29,8 @@
 */
 
 #include "studyview.h"
+#include <gdk/gdkkeysyms.h>
+#include <gdk/gdkkeysyms-compat.h>
 #include "seriesview.h"
 #include "imagepool.h"
 #include "astockids.h"
@@ -53,7 +55,7 @@ m_selected(NULL),
 m_draw_reference_frame_ends(false) {
 	m_seriescount = 0;
 
-	Gtk::HBox* hbox = manage(new Gtk::HBox);
+	Gtk::HBox* hbox = Gtk::manage(new Gtk::HBox);
 	hbox->show();
 
 	// SET LAYOUT (BASED ON STUDYDATA)
@@ -83,81 +85,80 @@ m_draw_reference_frame_ends(false) {
 
 	// SERIES TABLE
 	
-	m_table = manage(new Gtk::Table(m_tile_y, m_tile_x, true));
+	m_table = Gtk::manage(new Gtk::Table(m_tile_y, m_tile_x, true));
 
 	m_table->set_row_spacings(2);
 	m_table->set_col_spacings(2);
 
 	// MEASURE TOOLBAR
 	
-	m_toolbar_measure = manage(new Gtk::Toolbar);
+	m_toolbar_measure = Gtk::manage(new Gtk::Toolbar);
 	m_toolbar_measure->set_toolbar_style(Gtk::TOOLBAR_ICONS);
-	m_toolbar_measure->set_orientation(Gtk::ORIENTATION_VERTICAL);
+	g_object_set(m_toolbar_measure->gobj(), "orientation", GTK_ORIENTATION_VERTICAL, NULL);
 	//m_toolbar_measure->show();
 
-	Gtk::ToggleToolButton* m_draw_eraser = manage(new Gtk::ToggleToolButton(Aeskulap::Stock::DRAW_ERASER));
+	Gtk::ToggleToolButton* m_draw_eraser = Gtk::manage(new Gtk::ToggleToolButton(Aeskulap::Stock::DRAW_ERASER));
 	m_draw_eraser->show();
 	m_toolbar_measure->append(*m_draw_eraser);
 	
 	// MAIN TOOLBAR (STUDY)
 
-	m_toolbar = manage(new Gtk::Toolbar);
-	m_toolbar->set_tooltips(true);
+	m_toolbar = Gtk::manage(new Gtk::Toolbar);
 
-	m_series_layout = manage(new SeriesLayoutToolButton());
+	m_series_layout = Gtk::manage(new SeriesLayoutToolButton());
 	m_toolbar->append(*m_series_layout);
 	m_series_layout->set_layout(m_tile_x, m_tile_y);
-	m_series_layout->set_tooltip(m_tooltips, gettext("Rearrange the series of the current study"));
-	m_series_layout->set_arrow_tooltip(m_tooltips, gettext("Display the series tiling menu"), "");
+	m_series_layout->set_tooltip_text(gettext("Rearrange the series of the current study"));
+	m_series_layout->set_arrow_tooltip_text(gettext("Display the series tiling menu"));
 	m_series_layout->signal_change_layout.connect(sigc::mem_fun(*this, &StudyView::on_change_layout));
 	if(count != 1) {
 		m_series_layout->show();
 	}
 
-	m_toggle_full = manage(new Gtk::MenuToolButton(Aeskulap::Stock::SERIES_SINGLE));
+	m_toggle_full = Gtk::manage(new Gtk::MenuToolButton(Aeskulap::Stock::SERIES_SINGLE));
 	m_toggle_full->signal_show_menu().connect(sigc::mem_fun(*this, &StudyView::on_popup_full));
 	m_toolbar->append(*m_toggle_full, sigc::mem_fun(*this, &StudyView::on_toggle_full));
-	m_toggle_full->set_tooltip(m_tooltips, gettext("Toggle single series mode"));
-	m_toggle_full->set_arrow_tooltip(m_tooltips, gettext("Display the series selection menu"), "");
+	m_toggle_full->set_tooltip_text(gettext("Toggle single series mode"));
+	m_toggle_full->set_arrow_tooltip_text(gettext("Display the series selection menu"));
 	m_toggle_full->set_menu(m_series_menu);
 	if(count != 1) {
 		m_toggle_full->show();
 	}
 
-	m_image_layout = manage(new ImageLayoutToolButton());
+	m_image_layout = Gtk::manage(new ImageLayoutToolButton());
 	m_toolbar->append(*m_image_layout);
-	m_image_layout->set_tooltip(m_tooltips, gettext("Rearrange the images of the selected series"));
-	m_image_layout->set_arrow_tooltip(m_tooltips, gettext("Display the the image tiling menu"), "");
+	m_image_layout->set_tooltip_text(gettext("Rearrange the images of the selected series"));
+	m_image_layout->set_arrow_tooltip_text(gettext("Display the the image tiling menu"));
 	m_image_layout->signal_change_layout.connect(sigc::mem_fun(*this, &StudyView::on_change_layout_series));
 	m_image_layout->show();
 
-	m_seperator_reference = manage(new Gtk::SeparatorToolItem);
+	m_seperator_reference = Gtk::manage(new Gtk::SeparatorToolItem);
 	m_seperator_reference->show();
 	m_toolbar->append(*m_seperator_reference);
 	
-	m_refframe = manage(new Gtk::ToggleToolButton(Aeskulap::Stock::REFFRAME));
-	m_refframe->set_tooltip(m_tooltips, gettext("Display references of the selected series"));
+	m_refframe = Gtk::manage(new Gtk::ToggleToolButton(Aeskulap::Stock::REFFRAME));
+	m_refframe->set_tooltip_text(gettext("Display references of the selected series"));
 	m_toolbar->append(*m_refframe, sigc::mem_fun(*this, &StudyView::on_toggle_refframe));
 
-	m_btn_3dcursor = manage(new Gtk::ToggleToolButton(Aeskulap::Stock::THREEDEE_CURSOR));
-	m_btn_3dcursor->set_tooltip(m_tooltips, gettext("Navigate through 3D views"));
+	m_btn_3dcursor = Gtk::manage(new Gtk::ToggleToolButton(Aeskulap::Stock::THREEDEE_CURSOR));
+	m_btn_3dcursor->set_tooltip_text(gettext("Navigate through 3D views"));
 	m_toolbar->append(*m_btn_3dcursor, sigc::mem_fun(*this, &StudyView::on_toggle_3dcursor));
 
-	m_btn_valuecursor = manage(new Gtk::ToggleToolButton(Aeskulap::Stock::VALUE_CURSOR));
-	m_btn_valuecursor->set_tooltip(m_tooltips, gettext("Display image values under the cursor"));
+	m_btn_valuecursor = Gtk::manage(new Gtk::ToggleToolButton(Aeskulap::Stock::VALUE_CURSOR));
+	m_btn_valuecursor->set_tooltip_text(gettext("Display image values under the cursor"));
 	m_btn_valuecursor->show();
 	m_toolbar->append(*m_btn_valuecursor, sigc::mem_fun(*this, &StudyView::on_toggle_valuecursor));
 
-	Gtk::SeparatorToolItem* seperator = manage(new Gtk::SeparatorToolItem);
+	Gtk::SeparatorToolItem* seperator = Gtk::manage(new Gtk::SeparatorToolItem);
 	m_toolbar->append(*seperator);
 	seperator->show();
 
-	m_measure = manage(new Gtk::ToggleToolButton(Aeskulap::Stock::MEASURE));
-	m_measure->set_tooltip(m_tooltips, gettext("Measurement tools"));
+	m_measure = Gtk::manage(new Gtk::ToggleToolButton(Aeskulap::Stock::MEASURE));
+	m_measure->set_tooltip_text(gettext("Measurement tools"));
 	m_toolbar->append(*m_measure, sigc::mem_fun(*this, &StudyView::on_toggle_measure));
 	//m_measure->show();
 
-	m_windowlevel = manage(new Aeskulap::WindowLevelToolButton);
+	m_windowlevel = Gtk::manage(new Aeskulap::WindowLevelToolButton);
 	m_windowlevel->signal_windowlevel_changed.connect(sigc::mem_fun(*this, &StudyView::on_windowlevel_changed));
 	m_windowlevel->signal_windowlevel_default.connect(sigc::mem_fun(*this, &StudyView::on_windowlevel_default));
 	m_windowlevel->signal_windowlevel_add.connect(sigc::mem_fun(*this, &StudyView::on_windowlevel_add));
@@ -178,7 +179,7 @@ m_draw_reference_frame_ends(false) {
 	
 	// VALUE TOOL
 
-	m_valuetool = manage(new Aeskulap::ValueTool(*this));
+	m_valuetool = Gtk::manage(new Aeskulap::ValueTool(*this));
 
 	set_redraw_on_allocate(false);
 }
@@ -190,7 +191,7 @@ StudyView::~StudyView() {
 
 void StudyView::on_realize() {
 	Gtk::VBox::on_realize();
-	get_window()->set_back_pixmap(Glib::RefPtr<Gdk::Pixmap>(0), false);
+
 }
 
 void StudyView::accelerate(Gtk::Window& window) {
@@ -395,7 +396,7 @@ void StudyView::draw_reference(Aeskulap::Display* display, const Glib::RefPtr<Im
 	display->draw_point(p3);
 }
 
-void StudyView::on_draw_instance(SeriesView* s, Aeskulap::Display* d, const Glib::RefPtr<Gdk::Window>& w, const Glib::RefPtr<Gdk::GC>& gc) {
+void StudyView::on_draw_instance(SeriesView* s, Aeskulap::Display* d, const Cairo::RefPtr<Cairo::Context>& cr) {
 	if(s == m_selected) {
 		return;
 	}
@@ -408,7 +409,7 @@ void StudyView::on_draw_instance(SeriesView* s, Aeskulap::Display* d, const Glib
 	
 	if(m_refframe->get_active()) {
 		if(m_draw_reference_frame_ends) {
-			gc->set_foreground(d->m_colorReference);
+			Aeskulap::set_cairo_color(cr, d->m_colorReference);
 			inst = m_selected->m_instance[0];
 		
 			draw_reference(d, inst);
@@ -419,13 +420,13 @@ void StudyView::on_draw_instance(SeriesView* s, Aeskulap::Display* d, const Glib
 	
 		inst = m_selected->m_instance[m_selected->m_selected_image];
 	
-		gc->set_foreground(d->m_colorSelected);
+		Aeskulap::set_cairo_color(cr, d->m_colorSelected);
 		draw_reference(d, inst);
 	}
 	
 	// draw 3d cursor
 	if(m_btn_3dcursor->get_active()) {
-		gc->set_foreground(d->m_colorSelected);
+		Aeskulap::set_cairo_color(cr, d->m_colorSelected);
 		d->draw_cross(m_3dcursor);
 	}
 }

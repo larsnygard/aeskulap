@@ -36,27 +36,27 @@ ImageLayoutToolButton::ImageLayoutToolButton() {
 	set_stock_id(Aeskulap::Stock::GRID_1X1);
 	m_index = 0;
 
-	Gtk::MenuItem* menuitem = manage(new Gtk::ImageMenuItem(Aeskulap::Stock::GRID_1X1));
+	Gtk::MenuItem* menuitem = Gtk::manage(new Gtk::ImageMenuItem(Aeskulap::Stock::GRID_1X1));
 	menuitem->signal_activate().connect(sigc::bind(sigc::mem_fun(*this, &ImageLayoutToolButton::on_change_layout), 0));
 	m_menu.add(*menuitem);
 	menuitem->show();
 
-	menuitem = manage(new Gtk::ImageMenuItem(Aeskulap::Stock::GRID_1X2));
+	menuitem = Gtk::manage(new Gtk::ImageMenuItem(Aeskulap::Stock::GRID_1X2));
 	menuitem->signal_activate().connect(sigc::bind(sigc::mem_fun(*this, &ImageLayoutToolButton::on_change_layout), 1));
 	m_menu.add(*menuitem);
 	menuitem->show();
 
-	menuitem = manage(new Gtk::ImageMenuItem(Aeskulap::Stock::GRID_2X1));
+	menuitem = Gtk::manage(new Gtk::ImageMenuItem(Aeskulap::Stock::GRID_2X1));
 	menuitem->signal_activate().connect(sigc::bind(sigc::mem_fun(*this, &ImageLayoutToolButton::on_change_layout), 2));
 	m_menu.add(*menuitem);
 	menuitem->show();
 
-	menuitem = manage(new Gtk::ImageMenuItem(Aeskulap::Stock::GRID_2X2));
+	menuitem = Gtk::manage(new Gtk::ImageMenuItem(Aeskulap::Stock::GRID_2X2));
 	menuitem->signal_activate().connect(sigc::bind(sigc::mem_fun(*this, &ImageLayoutToolButton::on_change_layout), 3));
 	m_menu.add(*menuitem);
 	menuitem->show();
 
-	menuitem = manage(new Gtk::ImageMenuItem(Aeskulap::Stock::GRID_4X4));
+	menuitem = Gtk::manage(new Gtk::ImageMenuItem(Aeskulap::Stock::GRID_4X4));
 	menuitem->signal_activate().connect(sigc::bind(sigc::mem_fun(*this, &ImageLayoutToolButton::on_change_layout), 4));
 	m_menu.add(*menuitem);
 	menuitem->show();

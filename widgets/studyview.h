@@ -91,7 +91,7 @@ protected:
 
 	void on_change_layout_series(int x, int y);
 
-	void on_draw_instance(SeriesView* s, Aeskulap::Display* d, const Glib::RefPtr<Gdk::Window>& w, const Glib::RefPtr<Gdk::GC>& gc);
+	void on_draw_instance(SeriesView* s, Aeskulap::Display* d, const Cairo::RefPtr<Cairo::Context>& cr);
 
 	void on_toggle_full();
 
@@ -137,7 +137,6 @@ private:
 
 	SeriesView* create_seriesview(const Glib::RefPtr<ImagePool::Series>& series);
 
-	Gtk::Tooltips m_tooltips;
 
 	Gtk::Table* m_table;
 	

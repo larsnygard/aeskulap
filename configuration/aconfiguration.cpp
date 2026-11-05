@@ -82,9 +82,9 @@ Glib::ustring Configuration::get_name_from_path(const Glib::ustring& path) {
 
 #else
 
-// gconf configuration backend
+// 2026: GKeyFile backend (gconf is long dead)
 
-#include "aconfiguration-gconf.cpp"
+#include "aconfiguration-keyfile.cpp"
 
 #endif
 

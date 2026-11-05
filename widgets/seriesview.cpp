@@ -46,20 +46,20 @@ m_series(series) {
 	m_offset = 0;
 	m_selected_image = 0;
 
-	m_table = manage(new Gtk::Table(m_tile_y, m_tile_x, true));
+	m_table = Gtk::manage(new Gtk::Table(m_tile_y, m_tile_x, true));
 
 	m_table->set_row_spacings(0);
 	m_table->set_col_spacings(0);
 
-	m_scrollbar = manage(new Gtk::VScrollbar);
+	m_scrollbar = Gtk::manage(new Gtk::VScrollbar);
 	m_scrollbar->set_range(0,1);
 	m_scrollbar->set_value(0);
 	m_scrollbar->signal_change_value().connect(sigc::mem_fun(*this, &SeriesView::on_change_value));
 
-	//m_control_handle = manage(new Gtk::HandleBox);
-	m_ctrl_frame = manage(new Aeskulap::MultiFrameCtrl);
+	//m_control_handle = Gtk::manage(new Gtk::HandleBox);
+	m_ctrl_frame = Gtk::manage(new Aeskulap::MultiFrameCtrl);
 
-	Gtk::VBox* vbox = manage(new Gtk::VBox);
+	Gtk::VBox* vbox = Gtk::manage(new Gtk::VBox);
 	vbox->pack_start(*m_table);
 	vbox->pack_start(*m_ctrl_frame, Gtk::PACK_SHRINK);
 	
@@ -82,7 +82,7 @@ SeriesView::~SeriesView() {
 
 void SeriesView::on_realize() {
 	Gtk::HBox::on_realize();
-	get_window()->set_back_pixmap(Glib::RefPtr<Gdk::Pixmap>(0), false);
+
 }
 
 void SeriesView::add_instance(const Glib::RefPtr<ImagePool::Instance>& instance) {
@@ -462,8 +462,8 @@ void SeriesView::schedule_repaint(int timeout) {
 	m_repaint_source = Glib::signal_timeout().connect(sigc::bind(sigc::mem_fun(*this, &SeriesView::on_timeout), 1), timeout);
 }
 
-void SeriesView::on_draw_instance(Aeskulap::Display* d, const Glib::RefPtr<Gdk::Window>& w, const Glib::RefPtr<Gdk::GC>& gc) {
-	signal_draw(this, d, w, gc);
+void SeriesView::on_draw_instance(Aeskulap::Display* d, const Cairo::RefPtr<Cairo::Context>& cr) {
+	signal_draw(this, d, cr);
 }
 
 const Glib::RefPtr<ImagePool::Series>& SeriesView::get_series() {
