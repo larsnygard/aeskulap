@@ -290,6 +290,7 @@ void MainWindow::on_study_added(const Glib::RefPtr<ImagePool::Study>& study) {
 	m_mainNotebook->append_page(*frame, *tab);
 	frame->show();
 
+
 	if(m_raise_opened) {
 		m_raise_opened = false;
 		m_mainNotebook->set_current_page(-1);
