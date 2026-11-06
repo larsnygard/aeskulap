@@ -12,6 +12,7 @@ set(aeskulap_SOURCES
   aboutdialog.cpp
   windowleveldialog.cpp
   main.cpp
+  seriesmath.cpp
 )
 
 add_executable(aeskulap ${aeskulap_SOURCES})

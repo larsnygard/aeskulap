@@ -64,6 +64,8 @@ class ImageLayoutToolButton;
 
 class StudyView : public Gtk::VBox, public Aeskulap::Tiler<SeriesView> {
 public:
+	// ask the main window to run its file loader on computed DICOM files
+	sigc::signal< void, std::list< Glib::ustring > > signal_load_files;
 
 	StudyView(const Glib::RefPtr<ImagePool::Study>& study);
 
@@ -135,6 +137,14 @@ protected:
 
 	void sync_postproc_controls();
 
+	// series arithmetic (SeriesMath): build a computed series from the
+	// selected source series; 'op': "sub" needs two sources (selected +
+	// next-largest compatible), "mip" uses the selected one.
+	void series_subtract();
+	void series_mip();
+	const Glib::RefPtr<ImagePool::Study>& get_study() { return m_study; }
+	void main_window_load_files(const std::list< Glib::ustring >& files) { signal_load_files(files); }
+
 	void on_mpr_toggled();
 
 	void on_doubleclick(SeriesView* s, Aeskulap::Display* d);
@@ -177,6 +187,8 @@ private:
 	Aeskulap::PostProcToolButton* m_postproc;
 
 	Gtk::ToggleToolButton* m_mpr_button;
+	Gtk::ToolButton* m_sub_button;
+	Gtk::ToolButton* m_mip_button;
 
 	Gtk::Notebook* m_content_notebook;
 

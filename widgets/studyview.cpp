@@ -38,6 +38,9 @@
 #include "awindowleveltoolbutton.h"
 #include "apostproctoolbutton.h"
 #include "mprview.h"
+#include "seriesmath.h"
+#include <dcmtk/dcmdata/dcuid.h>
+#include <cstdlib>
 #include "avaluetool.h"
 
 #include "serieslayouttoolbutton.h"
@@ -188,6 +191,22 @@ m_draw_reference_frame_ends(false) {
 	m_toolbar->append(*m_mpr_button);
 
 	m_mpr_view = NULL;
+
+	m_sub_button = Gtk::manage(new Gtk::ToolButton());
+	m_sub_button->set_icon_name("aeskulap-info");
+	m_sub_button->set_label("Sub");
+	m_sub_button->set_tooltip_text(gettext("Subtract: selected series minus the next compatible series (writes computed SC series)"));
+	m_sub_button->signal_clicked().connect(sigc::mem_fun(*this, &StudyView::series_subtract));
+	m_sub_button->show();
+	m_toolbar->append(*m_sub_button);
+
+	m_mip_button = Gtk::manage(new Gtk::ToolButton());
+	m_mip_button->set_icon_name("aeskulap-info");
+	m_mip_button->set_label("MIP");
+	m_mip_button->set_tooltip_text(gettext("Maximum intensity projection of the selected series (writes computed SC series)"));
+	m_mip_button->signal_clicked().connect(sigc::mem_fun(*this, &StudyView::series_mip));
+	m_mip_button->show();
+	m_toolbar->append(*m_mip_button);
 
 	hbox->pack_end(*m_content_notebook);
 	hbox->pack_end(*m_toolbar_measure, false, false);
@@ -419,6 +438,101 @@ void StudyView::on_mpr_toggled() {
 		}
 		m_content_notebook->set_current_page(0);
 	}
+}
+
+
+static std::vector<Glib::RefPtr<ImagePool::Instance> > inst_vector(const Glib::RefPtr<ImagePool::Series>& ser) {
+	std::vector<Glib::RefPtr<ImagePool::Instance> > v;
+	if(!ser) {
+		return v;
+	}
+	for(ImagePool::Series::iterator i = ser->begin(); i != ser->end(); ++i) {
+		if(i->second) {
+			v.push_back(i->second);
+		}
+	}
+	return v;
+}
+
+void StudyView::series_mip() {
+	if(!m_selected) {
+		return;
+	}
+	const Glib::RefPtr<ImagePool::Series>& ser = m_selected->get_series();
+	std::vector<Glib::RefPtr<ImagePool::Instance> > v = inst_vector(ser);
+	if(v.size() < 2) {
+		return;
+	}
+	char outdir[512];
+	snprintf(outdir, sizeof(outdir), "/tmp/aeskulap-mip-XXXXXX");
+	if(!mkdtemp(outdir)) {
+		return;
+	}
+	char suid[64];
+	dcmGenerateUniqueIdentifier(suid, SITE_SERIES_UID_ROOT);
+	Aeskulap::SeriesMath::Result r = Aeskulap::SeriesMath::maximum_intensity_project(
+		v, outdir, m_study->studyinstanceuid(), suid,
+		std::string(ser->description()) + " MIP");
+	if(r.frames < 1) {
+		return;
+	}
+	std::list<Glib::ustring> files;
+	for(int i = 1; i <= r.frames; i++) {
+		char name[600];
+		snprintf(name, sizeof(name), "%s/mip%04d.dcm", outdir, i);
+		files.push_back(name);
+	}
+	main_window_load_files(files);
+}
+
+void StudyView::series_subtract() {
+	if(!m_selected) {
+		return;
+	}
+	// pick the selected series plus the largest other series with the same
+	// frame count, width and height
+	const Glib::RefPtr<ImagePool::Series>& sel = m_selected->get_series();
+	std::vector<Glib::RefPtr<ImagePool::Instance> > a = inst_vector(sel);
+	if(a.size() < 1) {
+		return;
+	}
+	int w = a[0]->width(), h = a[0]->height();
+	Glib::RefPtr<ImagePool::Series> other;
+	for(ImagePool::Study::iterator i = m_study->begin(); i != m_study->end(); ++i) {
+		const Glib::RefPtr<ImagePool::Series>& s2 = i->second;
+		if(!s2 || s2 == sel || s2->size() != a.size()) {
+			continue;
+		}
+		const Glib::RefPtr<ImagePool::Instance>& f2 = s2->begin()->second;
+		if(f2 && f2->width() == w && f2->height() == h) {
+			other = s2;
+			break;
+		}
+	}
+	if(!other) {
+		return;
+	}
+	std::vector<Glib::RefPtr<ImagePool::Instance> > b = inst_vector(other);
+	char outdir[512];
+	snprintf(outdir, sizeof(outdir), "/tmp/aeskulap-sub-XXXXXX");
+	if(!mkdtemp(outdir)) {
+		return;
+	}
+	char suid[64];
+	dcmGenerateUniqueIdentifier(suid, SITE_SERIES_UID_ROOT);
+	Aeskulap::SeriesMath::Result r = Aeskulap::SeriesMath::subtract(
+		a, b, outdir, m_study->studyinstanceuid(), suid,
+		std::string(sel->description()) + " - " + std::string(other->description()));
+	if(r.frames < 1) {
+		return;
+	}
+	std::list<Glib::ustring> files;
+	for(int i = 1; i <= r.frames; i++) {
+		char name[600];
+		snprintf(name, sizeof(name), "%s/sub%04d.dcm", outdir, i);
+		files.push_back(name);
+	}
+	main_window_load_files(files);
 }
 
 void StudyView::sync_postproc_controls() {

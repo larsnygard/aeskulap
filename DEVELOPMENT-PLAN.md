@@ -2,7 +2,7 @@
 
 **Read-me-first handoff plan.** If your context is fresh, start here.
 
-## Status (updated 2026-11-06, HEAD = fd85228f pushed to origin/master)
+## Status (updated 2026-11-06, HEAD = stage4 commit pushed to origin/master)
 - **Plan Stage 1 (quick wins) — DONE** (commits in `git log`, "0.3 stage2/…" labels): CT presets
   Bone W2000/C300, Soft tissue W350/C50, Brain W80/C40, Liver W150/C60 added to
   `add_default_presets_ct()` (configuration/aconfiguration.cpp); About dialog full programmatic
@@ -61,7 +61,18 @@ Old design notes:
   4. Entry: `aseriesmenu.cpp` add "MPR (3 planes)" → StudyView appends MPRView tab (title
      "MPR <series desc>"). MPRView lives in widgets/CMakeLists GLOB, no CMake edit needed
      after `cmake .`.
-- **Plan Stage 4 (series arithmetic) — NOT STARTED** (see below).
+- **Plan Stage 4 (series arithmetic) — DONE** (this commit). Architecture change from the
+  original note: instead of in-memory Instances (ctor is friend-protected to Loader),
+  `src/seriesmath.{h,cpp}` computes in int32 modality-LUT domain and **writes real Secondary
+  Capture DICOM files** (signed int16, LittleEndianExplicit, EWM_createNewMeta) into a
+  mkdtemp dir; StudyView::series_subtract()/series_mip() then load them through the existing
+  FileLoader via StudyView::signal_load_files (MainWindow wires it to m_fileloader.load).
+  UI: "Sub" and "MIP" ToolButtons in StudyView toolbar (Sub pairs selected series with the
+  first other series matching frame count + width + height).
+  Headless tests: ./tests/test_seriesmath.sh — 11 checks (load_pixels LUT domain, MIP=max,
+  Sub=A-B, signed negative round-trip, grid-mismatch rejected, file dims) ALL PASS.
+  Results are persistent (files on disk) and exportable. GUI click-test of Sub/MIP buttons
+  not yet done (no xdotool).
 - **Plan Stage 5 (CPR) — NOT STARTED** (see below).
 
 ## Repo / build / run
@@ -97,12 +108,8 @@ Old design notes:
 - **AboutDialog**: src/aboutdialog.cpp (fully programmatic fields; glade widget kept for shell).
 
 ## Stages remaining
-### Stage 4 — Series arithmetic
-Dialog: series A + B + op (Add, Sub A-B, Sub B-A, Max, Min, Avg) + formula bar (tokens A B + - *
-/ min max avg, shunting-yard). Result = new tab. In-memory instances are the hard part:
-Instance ctor is friend-protected to Loader — add a `friend Compose` (imagepool/poolinstance.h)
-+ a `PoolCompose` builder that copies series headers and injects raw pixel buffers.
-UI: Tools menu "Image arithmetic…".
+### Stage 4 — DONE; see status block above. Possible follow-up: full ops dialog
+(Add/Max/Min/Avg + formula bar, shunting-yard) on top of SeriesMath (engine already int32 domain).
 ### Stage 5 — Curved planar reformation (CPR)
 Shift+click control points in axial view (world mm) → Catmull-Rom spline → parallel-transport
 frame from orientation cosines → sample cutline perpendicular to tangent → straightened image

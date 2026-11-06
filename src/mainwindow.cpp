@@ -279,6 +279,9 @@ void MainWindow::on_study_added(const Glib::RefPtr<ImagePool::Study>& study) {
 	std::cout << "new study " << study->studyinstanceuid() << std::endl;
 
 	StudyView* frame = manage(new StudyView(study));
+	frame->signal_load_files.connect([this](std::list< Glib::ustring > files) {
+		m_fileloader.load(files);
+	});
 	frame->signal_windowlevel_add.connect(sigc::mem_fun(*this, &MainWindow::on_windowlevel_add));
 
 	m_studyview[study->studyinstanceuid()] = frame;
