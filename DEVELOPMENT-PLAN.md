@@ -2,7 +2,7 @@
 
 **Read-me-first handoff plan.** If your context is fresh, start here.
 
-## Status (updated 2026-11-06, HEAD = stage4 commit pushed to origin/master)
+## Status (updated 2026-11-06, HEAD = stage5 commit pushed to origin/master)
 - **Plan Stage 1 (quick wins) — DONE** (commits in `git log`, "0.3 stage2/…" labels): CT presets
   Bone W2000/C300, Soft tissue W350/C50, Brain W80/C40, Liver W150/C60 added to
   `add_default_presets_ct()` (configuration/aconfiguration.cpp); About dialog full programmatic
@@ -73,7 +73,21 @@ Old design notes:
   Sub=A-B, signed negative round-trip, grid-mismatch rejected, file dims) ALL PASS.
   Results are persistent (files on disk) and exportable. GUI click-test of Sub/MIP buttons
   not yet done (no xdotool).
-- **Plan Stage 5 (CPR) — NOT STARTED** (see below).
+- **Plan Stage 5 (CPR) — DONE (engine + wiring)** (this commit).
+  - `widgets/cpr.{h,cpp}` (in aeskulap-widgets; pure statics): `Cpr::spline` Catmull-Rom
+    arc-length decimated ~1px (threshold walker, endpoints exact, closed-curve support);
+    `Cpr::reformat(vol, pts, out, w, h)` -> straightened int16 image, columns=path arc,
+    rows=slices (row0=lowest z), bilinear (x,y) / linear z, signed domain. Headless
+    ./tests/test_cpr.sh 15 checks ALL PASS.
+  - `SeriesMath::write_sc` (public) persists the CPR frame as SC DICOM (signed int16).
+  - MPRView: CPR mode (ToggleToolButton 'CPR' in StudyView toolbar; auto-enables MPR).
+    In CPR mode: axial left-clicks add spline points (orange overlay on axial + projected
+    ticks at crosshair-row on coronal/sagittal), Enter fires signal_cpr_compute,
+    Esc clears. StudyView::on_cpr_compute -> Cpr::reformat -> write_sc -> FileLoader
+    (result = new tab). Points are pixel units (no spacing used).
+  - NOT click-verified in GUI: X display capture shows black desktop (compositor/lock),
+    ptrace_scope=1, no xdotool. Engine fully unit-tested; interaction needs a manual
+    user click-through.
 
 ## Repo / build / run
 - Repo: `~/src/aeskulap` → GitHub `larsnygard/aeskulap` (master). Tag `0.2.9` exists;
@@ -110,10 +124,9 @@ Old design notes:
 ## Stages remaining
 ### Stage 4 — DONE; see status block above. Possible follow-up: full ops dialog
 (Add/Max/Min/Avg + formula bar, shunting-yard) on top of SeriesMath (engine already int32 domain).
-### Stage 5 — Curved planar reformation (CPR)
-Shift+click control points in axial view (world mm) → Catmull-Rom spline → parallel-transport
-frame from orientation cosines → sample cutline perpendicular to tangent → straightened image
-(path × cutline) as new series tab. Toolbar toggle "CPR mode".
+### Stage 5 — DONE; see status block. Manual GUI click-through checklist (user):
+open 48-slice volume -> MPR on -> CPR on -> click ~5 points on axial -> Enter ->
+new CPR tab appears (straightened strip, path x slices); Esc clears points.
 
 ## Conventions
 - Every stage: `make -C build -j` clean → `cmake --install build` → `./tests/test_render.sh`

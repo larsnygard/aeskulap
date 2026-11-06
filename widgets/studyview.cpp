@@ -39,6 +39,7 @@
 #include "apostproctoolbutton.h"
 #include "mprview.h"
 #include "seriesmath.h"
+#include "cpr.h"
 #include <dcmtk/dcmdata/dcuid.h>
 #include <cstdlib>
 #include "avaluetool.h"
@@ -207,6 +208,14 @@ m_draw_reference_frame_ends(false) {
 	m_mip_button->signal_clicked().connect(sigc::mem_fun(*this, &StudyView::series_mip));
 	m_mip_button->show();
 	m_toolbar->append(*m_mip_button);
+
+	m_cpr_button = Gtk::manage(new Gtk::ToggleToolButton());
+	m_cpr_button->set_icon_name("aeskulap-info");
+	m_cpr_button->set_label("CPR");
+	m_cpr_button->set_tooltip_text(gettext("CPR mode: click points on the axial MPR pane, Enter computes the curved planar reformation, Esc clears"));
+	m_cpr_button->signal_toggled().connect(sigc::mem_fun(*this, &StudyView::on_cpr_toggled));
+	m_cpr_button->show();
+	m_toolbar->append(*m_cpr_button);
 
 	hbox->pack_end(*m_content_notebook);
 	hbox->pack_end(*m_toolbar_measure, false, false);
@@ -426,6 +435,10 @@ void StudyView::on_mpr_toggled() {
 		int wc = d ? d->get_windowlevel().center : 40;
 		int ww = d ? d->get_windowlevel().width : 400;
 		m_mpr_view = new MPRView(vol, cx, cy, cz, wc, ww);
+		m_mpr_view->signal_cpr_compute.connect(sigc::mem_fun(*this, &StudyView::on_cpr_compute));
+		if(m_cpr_button && m_cpr_button->get_active()) {
+			m_mpr_view->set_cpr_mode(true);
+		}
 		m_content_notebook->append_page(*m_mpr_view);
 		m_mpr_view->show_all();
 		m_content_notebook->set_current_page(1);
@@ -532,6 +545,49 @@ void StudyView::series_subtract() {
 		snprintf(name, sizeof(name), "%s/sub%04d.dcm", outdir, i);
 		files.push_back(name);
 	}
+	main_window_load_files(files);
+}
+
+
+void StudyView::on_cpr_toggled() {
+	if(m_mpr_view) {
+		m_mpr_view->set_cpr_mode(m_cpr_button->get_active());
+	}
+	if(m_cpr_button->get_active() && !m_mpr_button->get_active()) {
+		m_mpr_button->set_active(true);  // turns MPR on; CPR mode applies below
+	}
+}
+
+void StudyView::on_cpr_compute() {
+	if(!m_mpr_view || !m_selected) {
+		return;
+	}
+	const std::vector<Cpr::Point>& pts = m_mpr_view->cpr_points();
+	if(pts.size() < 2) {
+		return;
+	}
+	Glib::RefPtr<Volume> vol = m_selected->volume();
+	std::vector<gint16> out;
+	int w = 0, h = 0;
+	if(Cpr::reformat(vol, pts, out, w, h) < 1) {
+		return;
+	}
+	char outdir[512];
+	snprintf(outdir, sizeof(outdir), "/tmp/aeskulap-cpr-XXXXXX");
+	if(!mkdtemp(outdir)) {
+		return;
+	}
+	char suid[64];
+	dcmGenerateUniqueIdentifier(suid, SITE_SERIES_UID_ROOT);
+	char name[600];
+	snprintf(name, sizeof(name), "%s/cpr0001.dcm", outdir);
+	if(!Aeskulap::SeriesMath::write_sc(out, w, h, name,
+	                                   m_study->studyinstanceuid(), suid,
+	                                   std::string(vol->description()) + " CPR", 0, 1)) {
+		return;
+	}
+	std::list<Glib::ustring> files;
+	files.push_back(name);
 	main_window_load_files(files);
 }
 

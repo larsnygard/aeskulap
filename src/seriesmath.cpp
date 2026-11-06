@@ -48,7 +48,7 @@ bool SeriesMath::load_pixels(const Glib::RefPtr<ImagePool::Instance>& inst,
     return true;
 }
 
-bool SeriesMath::write_frame(const std::vector<gint16>& frame, int w, int h,
+bool SeriesMath::write_sc(const std::vector<gint16>& frame, int w, int h,
                              const std::string& path,
                              const std::string& studyuid,
                              const std::string& seriesuid,
@@ -178,7 +178,7 @@ SeriesMath::Result SeriesMath::subtract(
         }
         char name[256];
         snprintf(name, sizeof(name), "%s/sub%04zu.dcm", outdir.c_str(), i + 1);
-        if(write_frame(frame, wa, ha, name, suid, sseries, description,
+        if(write_sc(frame, wa, ha, name, suid, sseries, description,
                        (int)i, (int)n)) {
             res.frames++;
         }
@@ -237,7 +237,7 @@ SeriesMath::Result SeriesMath::maximum_intensity_project(
     }
     char name[256];
     snprintf(name, sizeof(name), "%s/mip0001.dcm", outdir.c_str());
-    if(write_frame(frame, w, h, name, suid, sseries, description, 0, 1)) {
+    if(write_sc(frame, w, h, name, suid, sseries, description, 0, 1)) {
         res.frames = 1;
         res.width = w;
         res.height = h;

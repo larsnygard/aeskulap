@@ -13,6 +13,10 @@
 #include <vector>
 
 #include "volume.h"
+#include "cpr.h"
+#include <sigc++/sigc++.h>
+
+using Aeskulap::Cpr;
 
 /**
  * Three panes (axial / coronal / sagittal) sharing one Volume.
@@ -32,6 +36,14 @@ public:
 	void set_palette(int id);
 	void set_invert(bool inv);
 
+	// CPR: left-click on the axial pane adds spline control points;
+	// Enter computes, Esc clears. signal fires on Enter.
+	sigc::signal< void > signal_cpr_compute;
+	void set_cpr_mode(bool on) { m_cpr_mode = on; rebuild_all(); }
+	bool cpr_mode() const { return m_cpr_mode; }
+	const std::vector<Cpr::Point>& cpr_points() const { return m_cpr_pts; }
+	void clear_cpr_points() { m_cpr_pts.clear(); rebuild_all(); }
+
 private:
 
 	class Pane;
@@ -47,6 +59,8 @@ private:
 	int m_palette;
 	std::vector<guint8> m_lut;   // 65536*3 shared LUT
 	guint64 m_revision;
+	bool m_cpr_mode = false;
+	std::vector<Cpr::Point> m_cpr_pts;
 
 	Pane* m_pane[3];
 

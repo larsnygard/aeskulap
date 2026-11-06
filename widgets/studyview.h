@@ -140,6 +140,8 @@ protected:
 	// series arithmetic (SeriesMath): build a computed series from the
 	// selected source series; 'op': "sub" needs two sources (selected +
 	// next-largest compatible), "mip" uses the selected one.
+	void on_cpr_compute();
+	void on_cpr_toggled();
 	void series_subtract();
 	void series_mip();
 	const Glib::RefPtr<ImagePool::Study>& get_study() { return m_study; }
@@ -189,6 +191,7 @@ private:
 	Gtk::ToggleToolButton* m_mpr_button;
 	Gtk::ToolButton* m_sub_button;
 	Gtk::ToolButton* m_mip_button;
+	Gtk::ToggleToolButton* m_cpr_button;
 
 	Gtk::Notebook* m_content_notebook;
 

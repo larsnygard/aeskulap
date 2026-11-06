@@ -32,6 +32,15 @@ public:
                            const std::string& seriesuid,
                            const std::string& description);
 
+    // Write one signed int16 frame as a Secondary Capture DICOM file.
+    // Public: used by Cpr to persist its straightened image.
+    static bool write_sc(const std::vector<gint16>& frame, int w, int h,
+                         const std::string& path,
+                         const std::string& studyuid,
+                         const std::string& seriesuid,
+                         const std::string& description,
+                         int frame_index, int total_frames);
+
     // MIP: per (row,col) take the max over all frames of the series.
     static Result maximum_intensity_project(const std::vector<Glib::RefPtr<ImagePool::Instance> >& a,
                                             const std::string& outdir,
@@ -43,13 +52,7 @@ public:
     static bool load_pixels(const Glib::RefPtr<ImagePool::Instance>& inst,
                             std::vector<gint32>& out, int& w, int& h, bool& is_signed);
 
-private:
-    static bool write_frame(const std::vector<gint16>& frame, int w, int h,
-                            const std::string& path,
-                            const std::string& studyuid,
-                            const std::string& seriesuid,
-                            const std::string& description,
-                            int frame_index, int total_frames);
+
 };
 
 } // namespace Aeskulap
