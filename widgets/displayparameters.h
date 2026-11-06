@@ -36,6 +36,7 @@
 
 #include "poolinstance.h"
 #include "awindowlevel.h"
+#include "volume.h"
 
 // display parameters
 
@@ -62,9 +63,22 @@ public:
 
 	bool inverted;
 
+	// palette id (see widgets/displaypalette.h); -1 = classic 8-bit ramp
+	int palette;
+
+	// per-series shared post-processing state (slab/kernel/projection).
+	// NULL for single images without a volume.
+	Glib::RefPtr<Volume> volume;
+
+	// slice index of THIS image inside the volume (its slab center)
+	int volume_index;
+
 protected:
 
 	DisplayParameters();
+
+	// out-of-line: Glib::RefPtr<Volume> member needs the complete type here
+	virtual ~DisplayParameters();
 
 };
 

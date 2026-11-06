@@ -36,7 +36,12 @@ move_x(0),
 move_y(0),
 selected(false),
 series_selected(false),
-inverted(false) {
+inverted(false),
+palette(0),
+volume_index(0) {
+}
+
+DisplayParameters::~DisplayParameters() {
 }
 
 Glib::RefPtr<DisplayParameters> DisplayParameters::create() {

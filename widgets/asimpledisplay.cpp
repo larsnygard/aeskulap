@@ -30,10 +30,13 @@
 
 #include <iostream>
 #include <cmath>
+#include <cstring>
 
 #include "asimpledisplay.h"
 #include "poolstudy.h"
 #include "aiconfactory.h"
+#include "volume.h"
+#include "displaypalette.h"
 
 #define sign(x) ((x)>0 ? 1:-1)
 
@@ -70,6 +73,10 @@ SimpleDisplay::~SimpleDisplay() {
 }
 
 void SimpleDisplay::init_display() {
+	m_proj_cache_rev = 0;
+	m_proj_cache_slab = -1;
+	m_proj_cache_proj = -1;
+	m_current_frame = 0;
 
 	m_offset_left = 10;
 	m_offset_right = 10;
@@ -253,7 +260,29 @@ void SimpleDisplay::create_windowmap() {
 	}
 
 	m_windowmap_size = 1 << m_windowmap_depth;
-	m_windowmap = (guint8*)malloc(sizeof(guint8)* m_windowmap_size);
+	// 3 bytes per entry: 24-bit palette LUT (grayscale path fills r=g=b)
+	m_windowmap = (guint8*)malloc(sizeof(guint8)* m_windowmap_size * 3);
+}
+
+const void* SimpleDisplay::effective_pixels() {
+	if(m_disp_params->volume && m_disp_params->volume->slices() > 0) {
+		refresh_projection_cache();
+		return m_proj_cache.empty() ? NULL : &m_proj_cache[0];
+	}
+	return m_image->pixels(m_current_frame);
+}
+
+void SimpleDisplay::refresh_projection_cache() {
+	const Glib::RefPtr<Volume>& vol = m_disp_params->volume;
+	if(!vol || vol->slices() == 0) {
+		m_proj_cache.clear();
+		return;
+	}
+	if(!m_proj_cache.empty() && m_proj_cache_rev == vol->revision()) {
+		return;
+	}
+	vol->project(m_disp_params->volume_index, m_proj_cache);
+	m_proj_cache_rev = vol->revision();
 }
 
 void SimpleDisplay::set_windowlevels(int c, int w) {
@@ -271,7 +300,7 @@ void SimpleDisplay::set_windowlevels(int c, int w) {
 	// handle slope, intercept
 	double cd = (((double)c - intercept) / slope);
 	double wd = ((double)w / slope);
-	
+
 	guint32 ramp_start = 0;
 	guint32 ramp_end = m_windowmap_size/* - 1*/;
 
@@ -279,29 +308,31 @@ void SimpleDisplay::set_windowlevels(int c, int w) {
 		cd = ramp_end - cd; 
 	}
 
-	double k = 256.0/wd;
+	int pal = m_disp_params->palette;
+	if(pal == Aeskulap::Palette::GRAY || pal < 0) {
+		// legacy 8-bit ramp, written into the 24-bit LUT as r=g=b
+		double k = 256.0/wd;
+		double c0 = (k * (cd - wd/2.0)) * -1.0;
+		double g = 0;
 
-	double c0 = (k * (cd - wd/2.0)) * -1.0;
-	double g = 0;
-
-	for(guint32 i = ramp_start; i < ramp_end; i++) {
-		
-		// get colorvalue
-		g = k * i + c0;
-	
-		if(g > 255) {
-			g = 255;
+		for(guint32 i = ramp_start; i < ramp_end; i++) {
+			g = k * i + c0;
+			if(g > 255) {
+				g = 255;
+			}
+			if(g < 0) {
+				g = 0;
+			}
+			guint8 p = invert ? (guint8)(255 - (guint8)g) : (guint8)g;
+			m_windowmap[i*3+0] = p;
+			m_windowmap[i*3+1] = p;
+			m_windowmap[i*3+2] = p;
 		}
-		if(g < 0) {
-			g = 0;
-		}
-
-		if(invert) {
-			m_windowmap[i] = 255 - (guint8)g;
-		}
-		else {
-			m_windowmap[i] = (guint8)g;
-		}
+	}
+	else {
+		// palette ramp over the SAME [cd - wd/2, cd + wd/2] interval
+		Aeskulap::Palette::build_lut(m_windowmap, m_windowmap_size, pal,
+		                             invert, (int)cd, (int)wd);
 	}
 }
 
@@ -354,14 +385,10 @@ void SimpleDisplay::linestretch_24to24(int x1, int x2, int y1, int y2, int yr, i
 	dx2 = dx << 1;
 
 	for (d = 0; d < dx; d++) {
-		p = lut[*src_pixels];
-		*dst_pixels++ = p; // & 0xFF;
-
-		p = lut[*(src_pixels+1)];
-		*dst_pixels++ = p; // & 0xFF;
-
-		p = lut[*(src_pixels+2)];
-		*dst_pixels++ = p; // & 0xFF;
+		// 24-bit LUT: 3 bytes per entry
+		*dst_pixels++ = lut[(size_t)(*src_pixels) * 3 + 0];
+		*dst_pixels++ = lut[(size_t)*(src_pixels+1) * 3 + 1];
+		*dst_pixels++ = lut[(size_t)*(src_pixels+2) * 3 + 2];
 
 		while (e >= 0) {
 			src_pixels += 3;
@@ -416,7 +443,6 @@ template < class ST >
 void SimpleDisplay::linestretch_24(int x1, int x2, int y1, int y2, int yr, int yw, ST src_pixels, guint8* dst_pixels, guint8* lut) {
 	int dx, dy, e, d, dx2;
 
-	guint8 p;
 
 	dx = (x2 - x1);
 	dy = (y2 - y1);
@@ -426,10 +452,11 @@ void SimpleDisplay::linestretch_24(int x1, int x2, int y1, int y2, int yr, int y
 	dx2 = dx << 1;
 
 	for (d = 0; d < dx; d++) {
-		p = lut[*src_pixels];
-		*dst_pixels++ = p; // & 0xFF;
-		*dst_pixels++ = p; //(p >> 8); // & 0xFF;
-		*dst_pixels++ = p; //(p >> 16); // & 0xFF;
+		// LUT is 24-bit (3 bytes per entry)
+		const guint8* v = lut + (size_t)(*src_pixels) * 3;
+		*dst_pixels++ = *v++;
+		*dst_pixels++ = *v++;
+		*dst_pixels++ = *v;
 
 		while (e >= 0) {
 			src_pixels ++;
@@ -482,12 +509,12 @@ void SimpleDisplay::rectstretch_24(ST src, int xs1, int ys1, int xs2, int ys2, c
 }
 
 void SimpleDisplay::rect_stretch8(int xs1, int ys1, int xs2, int ys2, int xd1, int yd1, int xd2, int yd2, const Glib::RefPtr<Gdk::Pixbuf>& pixbuf) {
-	guint8* src_pixels = (guint8*)m_image->pixels(m_current_frame);
+	guint8* src_pixels = (guint8*)effective_pixels();
 	rectstretch_24(src_pixels, xs1, ys1, xs2, ys2, pixbuf, xd1, yd1, xd2, yd2);
 }
 
 void SimpleDisplay::rect_stretch16(int xs1, int ys1, int xs2, int ys2, int xd1, int yd1, int xd2, int yd2, const Glib::RefPtr<Gdk::Pixbuf>& pixbuf) {
-	guint16* src_pixels = (guint16*)m_image->pixels(m_current_frame);
+	guint16* src_pixels = (guint16*)effective_pixels();
 
 	rectstretch_24(src_pixels, xs1, ys1, xs2, ys2, pixbuf, xd1, yd1, xd2, yd2);
 }

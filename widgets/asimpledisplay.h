@@ -158,6 +158,12 @@ private:
 
 	void create_windowmap();
 
+	/** pixels to blit: volume projection for volume params, else instance pixels */
+	const void* effective_pixels();
+
+	/** rebuild the per-display projection cache from m_disp_params->volume */
+	void refresh_projection_cache();
+
 protected:
 
 	// window(levels) map
@@ -167,6 +173,13 @@ protected:
 	guint8* m_windowmap;
 
 	int m_windowmap_size;
+
+	// per-display cache of the shared volume's projection for this
+	// display's slab center (display() only carries one slice)
+	std::vector<guint16> m_proj_cache;
+	guint64 m_proj_cache_rev;
+	int m_proj_cache_slab;
+	int m_proj_cache_proj;
 
 	double m_magnifier;
 
