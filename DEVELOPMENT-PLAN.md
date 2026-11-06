@@ -128,6 +128,36 @@ Old design notes:
 open 48-slice volume -> MPR on -> CPR on -> click ~5 points on axial -> Enter ->
 new CPR tab appears (straightened strip, path x slices); Esc clears points.
 
+## Windows port + CI binary releases (2026-11-06)
+- **Windows build**: MSYS2 UCRT64 (`mingw-w64-ucrt-x86_64-{toolchain,cmake,ninja,pkgconf,gtkmm3,dcmtk,zlib,libpng,libtiff,openssl}`).
+  CMake needs nothing special (pkg-config finds gtkmm-3.0 + dcmtk 3.7.1). Source changes:
+  `src/main.cpp` (win32 console UTF-8, datadir from exe dir via `find_datadir()` — relocatable,
+  works for local installs AND AppImage mounts; win32 block sets `GDK_PIXBUF_MODULE_FILE`/
+  `GSETTINGS_SCHEMA_DIR` from `<exedir>/../share` + expands RELATIVE `loaders/...` tokens in the
+  bundle's loaders.cache into a tmp cache), `src/aeskulap.rc.in` + `src/aeskulap.manifest`
+  (icon + UTF-8 activation-context manifest, wired in CMakeLists under `WIN32`).
+- **DCMTK link narrowing**: `CMakeLists.txt` filters `DCMTK_LIBRARIES` to the 14 modules
+  actually `#include`d (ofstd oflog oficonv dcmdata i2d dcmimgle dcmimage dcmjpeg ijg8/12/16
+  dcmjpls dcmtkcharls dcmtls dcmnet) — drops dcmrt/dcmtract/dcmpmap/dcmseg/dcmfg/dcmiod/xml/
+  sndfile/openjp2 from the closure. Verified: all 3 ctest pass, binary links.
+- **Bundle scripts** (tested locally on Linux; Windows path CI-only):
+  `scripts/bundle-linux.sh <build> <out> [dcmtk-prefix]` — install to out, BFS ldd closure
+  excluding glibc family, DCMTK name-filter copy from prefix, pixbuf loaders + schemas,
+  strips, writes `bin/aeskulap.sh` launcher. Local result: 124M tree, 0 not-found deps.
+  `scripts/bundle-windows.sh <build> <out>` — MSYS2 bash: exe + ldd DLLs into bin/,
+  cmake --install -> share/, schemas, pixbuf loaders + `gdk-pixbuf-query-loaders.exe` cache
+  rewritten to relative `loaders/` tokens.
+- **CI**: `.github/workflows/release.yml` — jobs windows (MSYS2) + linux (ubuntu-24.04,
+  DCMTK 3.7.1 built from source w/ cache + synthesized dcmtk.pc) run ctest gate + bundle;
+  tag `v*` also publishes GitHub Release with zip+tar.gz. NOTE repo default branch = master
+  (push HEAD:master AND HEAD:main; workflows must exist on default branch to dispatch).
+- **CPack**: TBZ2 binary (bin+share, relocatable via find_datadir) + source pkg; ignore-files
+  exclude vendored `dcmtk/` (3.5.3 legacy, dead), `web/`, build. Source pkg 332K clean.
+- **Open items**: first CI run (watch `gh run watch <id>`); smoke rc gate on linux job is a
+  heuristic (124=alive-under-xvfb ok); Windows job smoke only checks ldd, no GUI start.
+- **macOS** (not started): vcpkg has dcmtk port; gtkmm3 via homebrew is GTK2-era pain —
+  real cost estimate in chat history (macOS = medium-hard, Windows = done).
+
 ## Conventions
 - Every stage: `make -C build -j` clean → `cmake --install build` → `./tests/test_render.sh`
   ALL PASS → GUI smoke (background=true, expect study+series loaded, alive, no CRITICALs) →
