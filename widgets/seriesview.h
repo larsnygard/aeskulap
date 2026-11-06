@@ -34,6 +34,7 @@
 #include <gtkmm.h>
 #include <vector>
 #include "atiler.h"
+#include "volume.h"
 #include "awindowlevel.h"
 
 namespace Aeskulap {
@@ -101,6 +102,12 @@ public:
 
 	sigc::signal<void, SeriesView*, Aeskulap::Display*> signal_doubleclick;
 
+	/** build/attach the shared volume for slab projection (lazy, on demand) */
+	void ensure_volume();
+	void set_slab(int n);
+	void set_projection(Volume::Projection p);
+	Volume::Projection projection() const;
+
 protected:
 
 	void on_realize();
@@ -154,6 +161,9 @@ private:
 	void scroll_to(unsigned int pos, bool select=true);
 	
 	unsigned int m_offset;
+
+	Glib::RefPtr<Volume> m_volume;
+	bool m_volume_tried;
 
 	Gtk::Table* m_table;
 	

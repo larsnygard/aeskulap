@@ -29,6 +29,7 @@
 */
 
 #include "seriesview.h"
+#include "volume.h"
 #include "adisplay.h"
 #include "imagepool.h"
 #include "poolinstance.h"
@@ -41,7 +42,8 @@
 SeriesView::SeriesView(const Glib::RefPtr<ImagePool::Series>& series) : 
 Aeskulap::Tiler<Aeskulap::Display>(1, 1),
 m_selected(false),
-m_series(series) {
+m_series(series),
+m_volume_tried(false) {
 	m_instancecount = 0;
 	m_offset = 0;
 	m_selected_image = 0;
@@ -96,6 +98,12 @@ void SeriesView::add_instance(const Glib::RefPtr<ImagePool::Instance>& instance)
 	m_instance.push_back(instance);
 	Glib::RefPtr<DisplayParameters> p = DisplayParameters::create(instance);
 	p->series_selected = m_selected;
+	p->volume = m_volume;
+	p->volume_index = (int)m_instance.size() - 1;
+	if(m_volume) {
+		p->volume_index = m_volume->slice_for_instance(
+			instance->sopinstanceuid(), p->volume_index);
+	}
 	m_dispparam.push_back(p);
 
 	get_xy_from_pos(m_instancecount+1, x, y);
@@ -207,12 +215,29 @@ bool SeriesView::on_scroll_event(GdkEventScroll* event) {
 
 	select(true);
 
+	if(event->state & GDK_SHIFT_MASK) {
+		ensure_volume();
+		if(m_volume) {
+			int slab = m_volume->slab();
+			if(event->direction == GDK_SCROLL_UP) slab++;
+			else if(event->direction == GDK_SCROLL_DOWN) slab--;
+			set_slab(slab);
+			return true;
+		}
+		return false;
+	}
 	if(event->direction == GDK_SCROLL_UP) {
 		scroll_up();
 		return true;
 	}
 	if(event->direction == GDK_SCROLL_DOWN) {
 		scroll_down();
+		return true;
+	}
+	if(event->direction == GDK_SCROLL_SMOOTH) {
+		double dy = event->delta_y;
+		if(dy < 0) scroll_up();
+		else if(dy > 0) scroll_down();
 		return true;
 	}
 	
@@ -289,6 +314,49 @@ void SeriesView::apply_default_windowlevel() {
 
 	refresh(false);
 	schedule_repaint(1000);
+}
+
+void SeriesView::ensure_volume() {
+	if(m_volume_tried || !m_series) {
+		return;
+	}
+	m_volume_tried = true;
+	m_volume = Volume::from_series(m_series);
+	if(!m_volume) {
+		return;
+	}
+	for(unsigned int i = 0; i < m_dispparam.size(); i++) {
+		if(!m_instance[i]) {
+			continue;
+		}
+		m_dispparam[i]->volume = m_volume;
+		m_dispparam[i]->volume_index = m_volume->slice_for_instance(
+			m_instance[i]->sopinstanceuid(), (int)i);
+	}
+}
+
+void SeriesView::set_slab(int n) {
+	ensure_volume();
+	if(!m_volume) {
+		return;
+	}
+	m_volume->set_slab(n);
+	refresh(false);
+	schedule_repaint(1000);
+}
+
+void SeriesView::set_projection(Volume::Projection p) {
+	ensure_volume();
+	if(!m_volume) {
+		return;
+	}
+	m_volume->set_projection(p);
+	refresh(false);
+	schedule_repaint(1000);
+}
+
+Volume::Projection SeriesView::projection() const {
+	return m_volume ? m_volume->projection() : Volume::PASS;
 }
 
 void SeriesView::apply_changes(const Glib::RefPtr<DisplayParameters>& param) {

@@ -33,6 +33,25 @@ const K3 kernels[] = {
 };
 
 inline int clampi(long v) { return v < 0 ? 0 : (v > 65535 ? 65535 : (int)v); }
+inline int clampi_range(long v, long lo, long hi) { return v < lo ? (int)lo : (v > hi ? (int)hi : (int)v); }
+
+// signed DICOM pixels are two's-complement: HU = (int16_t)v. Rotate v by
+// +32768 to get an index (idx) that is affine in HU, so linear kernels
+// are correct across the wrap ring (air -1000HU <-> tissue +40HU).
+inline long to_domain(guint16 v, bool is_signed) {
+	return is_signed ? (long)((v + 32768u) & 0xFFFFu) : (long)v;
+}
+inline guint16 from_domain(long d, bool is_signed) {
+	if(is_signed) {
+		// d is idx-domain (HU + 32768); clamp HU to int16, store two's-complement
+		long hu = clampi_range(d - 32768, -32768, 32767);
+		if(hu < 0) {
+			hu += 65536;
+		}
+		return (guint16)hu;
+	}
+	return (guint16)clampi(d);
+}
 
 } // namespace
 
@@ -73,11 +92,8 @@ void apply(int id, const guint16* src, guint16* dst, int w, int h, bool is_signe
 		return;
 	}
 
-	// signed CT pixels live in two's-complement space; linear kernels
-	// computed over the unsigned wrap ring would spike along the air/HU
-	// boundary. Shift into an unsigned linear domain, kernel, shift back.
-	// (guint16 v, signed: real value = v - 32768)
-	const long off = is_signed ? 32768L : 0L;
+	// signed CT pixels: compute in the HU-linear domain (see to_domain)
+	// so kernels don't ring across the two's-complement wrap ring.
 
 	if(id == MEDIAN) {
 		static const int dx[8] = {-1,0,1,-1,1,-1,0,1};
@@ -85,7 +101,7 @@ void apply(int id, const guint16* src, guint16* dst, int w, int h, bool is_signe
 		for(int y = 0; y < h; y++) {
 			for(int x = 0; x < w; x++) {
 				long vals[9];
-				vals[0] = (long)src[(size_t)y*w + x] - off;
+				vals[0] = to_domain(src[(size_t)y*w + x], is_signed);
 				int n = 1;
 				for(int i = 0; i < 8; i++) {
 					int nx = x + dx[i];
@@ -94,10 +110,10 @@ void apply(int id, const guint16* src, guint16* dst, int w, int h, bool is_signe
 					if(ny < 0) ny = 0;
 					if(nx >= w) nx = w-1;
 					if(ny >= h) ny = h-1;
-					vals[n++] = (long)src[(size_t)ny*w + nx] - off;
+					vals[n++] = to_domain(src[(size_t)ny*w + nx], is_signed);
 				}
 				std::nth_element(vals, vals+4, vals+9);
-				dst[(size_t)y*w + x] = (guint16)clampi(vals[4] + off);
+				dst[(size_t)y*w + x] = from_domain(vals[4], is_signed);
 			}
 		}
 		return;
@@ -115,7 +131,7 @@ void apply(int id, const guint16* src, guint16* dst, int w, int h, bool is_signe
 					int nx = x + i;
 					if(nx < 0) nx = 0;
 					if(nx >= w) nx = w-1;
-					sum += (long)k.k[(j+1)*3 + (i+1)] * ((long)src[(size_t)ny*w + nx] - off);
+					sum += (long)k.k[(j+1)*3 + (i+1)] * to_domain(src[(size_t)ny*w + nx], is_signed);
 				}
 			}
 			long div = k.div;
@@ -124,7 +140,7 @@ void apply(int id, const guint16* src, guint16* dst, int w, int h, bool is_signe
 				for(int t = 0; t < 9; t++) div += k.k[t];
 				if(div == 0) div = 1;
 			}
-			dst[(size_t)y*w + x] = (guint16)clampi(sum / div + off);
+			dst[(size_t)y*w + x] = from_domain(sum / div, is_signed);
 		}
 	}
 }
