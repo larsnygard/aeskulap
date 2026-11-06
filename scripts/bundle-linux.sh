@@ -75,11 +75,12 @@ mkdir -p "$OUT/share/glib-2.0/schemas"
 cp /usr/share/glib-2.0/schemas/*.xml "$OUT/share/glib-2.0/schemas/" 2>/dev/null || true
 command -v glib-compile-schemas >/dev/null && glib-compile-schemas "$OUT/share/glib-2.0/schemas" 2>/dev/null || true
 
-# Launcher: sets the runtime env, execs the real binary (finds share/ via
+# Launcher: lives in bin/, resolves the bundle root one level up, sets the
+# runtime env, execs the real binary (finds share/ via
 # /proc/self/exe on its own).
 cat > "$OUT/bin/aeskulap.sh" <<'LAUNCH'
 #!/bin/sh
-root="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+root="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 export LD_LIBRARY_PATH="$root/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 [ -f "$root/lib/gdk-pixbuf-2.0/loaders.cache" ] && \
   export GDK_PIXBUF_MODULE_FILE="$root/lib/gdk-pixbuf-2.0/loaders.cache"

@@ -32,6 +32,10 @@ jobs:
             mingw-w64-ucrt-x86_64-pkgconf
             mingw-w64-ucrt-x86_64-gtkmm3
             mingw-w64-ucrt-x86_64-dcmtk
+            mingw-w64-ucrt-x86_64-icu
+            mingw-w64-ucrt-x86_64-libxml2
+            mingw-w64-ucrt-x86_64-openjpeg
+            mingw-w64-ucrt-x86_64-libsndfile
             mingw-w64-ucrt-x86_64-zlib
             mingw-w64-ucrt-x86_64-libpng
             mingw-w64-ucrt-x86_64-libtiff
