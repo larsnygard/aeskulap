@@ -2,59 +2,95 @@
 
 **Read-me-first handoff plan.** If your context is fresh, start here.
 
+## Status (updated 2026-11-06, HEAD = 92037997 pushed to origin/master)
+- **Plan Stage 1 (quick wins) — DONE** (commits in `git log`, "0.3 stage2/…" labels): CT presets
+  Bone W2000/C300, Soft tissue W350/C50, Brain W80/C40, Liver W150/C60 added to
+  `add_default_presets_ct()` (configuration/aconfiguration.cpp); About dialog full programmatic
+  info (GPL-2.0, authors Pipelka + Nygård, website larsnygard/aeskulap) in src/aboutdialog.cpp
+  (needs `#include "gettext.h"` — was a build break, fixed).
+- **Plan Stage 2 (palettes + kernels) — DONE, with tests**:
+  - `widgets/volume.{h,cpp}`: shared per-series Volume core — slab sum/max/min over N slices,
+    projections PASS/MIP/MINIP/AVG, 3×3 kernels (identity/sharpen/edge/blur/smooth) in
+    **signed HU domain** (air↔tissue edges no longer spike mid-gray; from_domain stores
+    two's-complement).
+  - `widgets/displaypalette.{h,cpp}`: 24-bit LUT palettes (Gray, Inverse, Hot Iron, Rainbow, Jet,
+    Red) + invert-after-LUT; wired in `asimpledisplay.cpp` render path via
+    `DisplayParameters::palette`.
+  - `widgets/apostproctoolbutton.{h,cpp}`: toolbar item with 3 ComboBoxTexts
+    (palette / kernel / projection). **Wired into StudyView** (ctor append after m_windowlevel;
+    signals → on_palette_changed/on_kernel_changed/on_projection_changed → m_selected;
+    sync_postproc_controls() on series select). GLOB in widgets/CMakeLists.txt picks up new files
+    after `cmake .` re-run.
+  - SeriesView API: `set_kernel/kernel()`, `set_palette/palette()`, `set_invert()`,
+    `set_projection/projection()`, `ensure_volume()` lazy volume attach; shift+scroll = slab.
+  - `tests/test_render.cpp` + `./tests/test_render.sh` — 25 headless checks, **ALL PASS**.
+    (Test links against build/*.a — `make -C build` first; script does this.)
+  - GUI smoke on DISPLAY=:0 with /tmp/testvol/: app runs, loads study/series, **zero GTK-CRITICALs**.
+- **Plan Stage 3 (MPR) — NOT STARTED. Design settled (do this):**
+  1. Extend `Volume`: `enum Axis {AXIS_Z, AXIS_Y, AXIS_X}` (plane normal), `set_axis`,
+     `set_center_x/y/z` (indices), cached `const guint16* plane(int &w, int &h)` — nearest-neighbor
+     resample: AXIS_Z = raw slice (w=vol.w, h=vol.h, fixed z=center_z); AXIS_Y coronal
+     (w=vol.w, h=nslices, fixed y=center_y); AXIS_X sagittal (w=vol.h, h=nslices, fixed
+     x=center_x). Apply window/level + palette through the SAME DisplayParameters path.
+  2. `DisplayParameters`: add `Volume::Axis axis` (default AXIS_Z); `asimpledisplay.cpp`
+     effective_pixels() → when axis != Z, fetch from volume->plane() instead of instance pixels.
+  3. `widgets/mprview.{h,cpp}`: class MPRView : Gtk::Grid — 3 SimpleDisplay panes
+     (labels Axial/Coronal/Sagittal), 3 DisplayParameters sharing window/level + palette/kernel,
+     each pointing at the same Volume with its axis; per-pane scroll event → center along that
+     axis → refresh all 3; crosshair lines optional (draw over Display via overlay).
+  4. Entry: `aseriesmenu.cpp` add "MPR (3 planes)" → StudyView appends MPRView tab (title
+     "MPR <series desc>"). MPRView lives in widgets/CMakeLists GLOB, no CMake edit needed
+     after `cmake .`.
+- **Plan Stage 4 (series arithmetic) — NOT STARTED** (see below).
+- **Plan Stage 5 (CPR) — NOT STARTED** (see below).
+
 ## Repo / build / run
-- Repo: `~/src/aeskulap` → GitHub `larsnygard/aeskulap` (master, tag `0.2.9`).
-- Native C++17 gtkmm-3 + DCMTK 3.7. Build: `cmake -B build && cd build && make -j$(nproc) && make install` (prefix `~/.local`, binary `~/.local/bin/aeskulap`, ~1.3 MB).
-- Run on the user's Xwayland: `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_* ~/.local/bin/aeskulap [file.dcm]`
-  (xauth filename changes per session — `ls /run/user/1000/xauth_*`).
-- Smoke test: launch with `/tmp/test.dcm` (synthetic SC image; regenerate with pydicom venv `/tmp/dvenv` if missing). Expect log lines `opened file:`, `new study`, `new series`, app stays alive. Exit 124 from `timeout` = GOOD (killed while running).
-- gdb: `gdb -q --batch -ex run -ex "bt 12" --args ./src/aeskulap /tmp/test.dcm`.
-- Layout debug trick: `-DAESKULAP_LAYOUT_DEBUG` + `frame->foreach` allocation dump (removed from tree; re-add temporarily when geometry misbehaves).
+- Repo: `~/src/aeskulap` → GitHub `larsnygard/aeskulap` (master). Tag `0.2.9` exists;
+  version bump to 0.3.0 only at program end (`project(aeskulap VERSION ...)` + About).
+- Native C++17 gtkmm-3 + DCMTK 3.7. Build: `cmake -B build && make -C build -j$(nproc)`;
+  install: `cmake --install build` (binary `~/.local/bin/aeskulap`, ~1.4 MB).
+- Run on user's Xwayland: `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_* ~/.local/bin/aeskulap /tmp/testvol/`
+  (xauth filename changes per session — `ls /run/user/1000/xauth_*`). Launch via
+  terminal(background=true), NOT `&`.
+- Multi-slice test dataset: `/tmp/testvol/` (synthetic CT-like volume, pydicom venv `/tmp/dvenv`).
+- gdb: `gdb -q --batch -ex run -ex "bt 12" --args ./src/aeskulap /tmp/testvol/img000.dcm`.
 - `gtk-builder-tool validate src/aeskulap.ui` after every .ui edit.
-- Skill `gtkmm2-gtkmm3-port` (skill_view) has all porting pitfalls. Commit each stage, push to origin, per Lars' "always push" convention.
+- Skill `gtkmm2-gtkmm3-port` has the porting pitfalls. Commit each stage, **push to origin** (Lars' rule).
+- LSP/clangd shows 'gtkmm.h not found' on every widgets/*.h — that's clangd missing pkg-config
+  paths; **ignore it**, the cmake build is the truth.
 
-## State at plan time (done, do not redo)
-- Full gtkmm3/DCMTK3.7 port builds, links, installs, opens DICOM, render threads finish. Commits `fad0d13`, `8209925` (layout packing fix). Tag 0.2.9 at fad0d13 (force-move pending, user approval needed).
-- `src/glade_compat.h` = libglademm replacement. `aeskulap.ui` = converted UI.
-- Config: GKeyFile backend `configuration/aconfiguration-keyfile.cpp`.
+## Key integration points (verified)
+- **Render pipeline**: `widgets/asimpledisplay.cpp` — `effective_pixels()` applies
+  Volume slab/projection + signed kernels; `rect_stretch16` applies window/level → palette LUT
+  → RGBA. `refresh()` re-runs on window/level change.
+- **DisplayParameters** (widgets/displayparameters.h): zoom/move/window/invert/`palette`/
+  `volume`/`volume_index` — add `axis` here for MPR.
+- **SeriesView** (widgets/seriesview.{h,cpp}): owns instances, `m_dispparam` vector,
+  `ensure_volume()`, `refresh()`, `schedule_repaint(ms)`; scroll at `on_scroll_event`.
+- **StudyView**: toolbar `m_toolbar->append(...)`; `m_selected` = selected SeriesView;
+  `sync_postproc_controls()`; tabs via `m_notebook`; `on_series_selected` → sync UI.
+- **Series context menu**: widgets/aseriesmenu.cpp.
+- **Geometry**: `ImagePool::Instance`: `get_position()` (mm), `get_orientation()` (cosines),
+  `spacing_x/y`, `pixels(frame)`, `bpp()`; z = sorted positions delta. Volume already uses these.
+- **Window/level presets**: keyfile groups `windowlevel <modality>/<description>`;
+  defaults in `Configuration::add_default_presets_ct()`.
+- **AboutDialog**: src/aboutdialog.cpp (fully programmatic fields; glade widget kept for shell).
 
-## Key integration points (verified by survey)
-- **Render pipeline**: `widgets/asimpledisplay.cpp` → `render()` calls `rect_stretch8/rect_stretch16` (greyscale→pixbuf). THE hook for LUT/palettes/kernels/projections. `bitstretch()` → `render()`. `refresh()` re-runs on window/level change. `DisplayParameters` (widgets/displayparameters.h) carries per-series params (zoom/move/window/invert) — extend for LUT/kernel/slab.
-- **Scroll**: `SeriesView::on_scroll_event` (seriesview.cpp:203) already scrolls slices; connect Shift+scroll → slab logic there. `m_instance` vector = instances in display order; `m_offset` = first visible index.
-- **Geometry**: `ImagePool::Instance` (imagepool/poolinstance.h): `get_position()` (x,y,z mm), `get_orientation()` (row/col direction cosines), `spacing_x/y`, `pixel_value(x,y,frame)`, `pixels(frame)`, `bpp()`, depth. z-spacing = delta of sorted positions.
-- **Series/Study**: imagepool/poolseries.h, poolstudy.h — `add_instance`, `signal_series_added`. MainWindow `on_study_added` (src/mainwindow.cpp:278) appends StudyView tab.
-- **Window/level presets**: settings dialog tree `presets_windowlevels` + keyfile groups `windowlevel <modality>/<description>`; Aeskulap::WindowLevelToolButton (awindowleveltoolbutton.*) loads modality presets from config.
-- **Toolbar buttons** in studyview.cpp: `m_toolbar->append(...)` — pattern of imagelayouttoolbutton/awindowleveltoolbutton for new toolbar widgets.
-- **AboutDialog**: src/aboutdialog.{h,cpp}, loaded via `get_widget_derived("aboutdialog",...)` from mainwindow; set fields programmatically (version, GPL v2, authors, website) — GTK3 `Gtk::AboutDialog` API.
-- UI file: `src/aeskulap.ui`; remember `<packing>` AFTER `<object>`, box children need explicit expand/fill.
-
-## Stages (each: implement → build → smoke-test on DISPLAY=:0 → commit+push)
-### Stage 1 — quick wins
-1. Verify scroll wheel works on a loaded series (log on_scroll_event; fix EventBox mask if events missing: add GDK_SCROLL_MASK to window).
-2. Shift+scroll = slab thickness (MIP slab around center slice). Store slab count in DisplayParameters; projection computed in render path: for 16-bit, min/max/mean over slab of instances (need slab data: compute in SeriesView which owns all instances — project CPU-side into a synthetic pixel buffer the Display can stretch; design: `InstanceProxy`? Simplest: SeriesView builds projected 16-bit buffer on slab change, feeds via a pseudo-Instance (ImagePool::Instance is heavy) → ALTERNATIVE: add `set_volume_overlay()`/`Display::set_projected(guint16*, w,h)` and rect_stretch16 uses it). Also menu/toolbar modes: NONE/MIP/MINIP/AIP.
-3. CT presets seeded into config defaults: Bone (W1700/L400→center 400? use classic: Bone W2000 C300; Soft tissue W350 C50; Lung W1500 C-600; Mediastinum W350 C50; Abdomen W350 C40; MIP handled as mode not preset) — seed via keyfile ensure_defaults() for `windowlevel CT/<name>`.
-4. About dialog: programmatic (name Aeskulap, version 0.2.9, comments GPL-2.0+, copyright 2005 A. Pipelka / 2026 fork L. Nygård, website aeskulap.nongnu.org + github), remove glade dependency.
-
-### Stage 2 — palettes + kernels
-- LUT enum + 256-entry (or 65536→256 LUT) applied in rect_stretch16/8: presets Grayscale, Inverse, Hot Iron, STET/Rainbow, (Jet, Pure red). Add palette picker toolbar button (toolbutton pattern).
-- Convolution 3×3 per series: Identity, Sharpen, Edge (Sobel-ish), Blur (gauss), Noise-reduce (median 3×3 cheap, or bilateral-lite) — apply to source 16-bit before windowing in projection/stretch path; store kernel id in DisplayParameters; toolbar popup menu.
-- Ensure invert + palette compose correctly (invert applies after LUT).
-
-### Stage 3 — MPR
-- New `MPRView` widget (3 panes: Axial/Coronal/Sagittal): volume = collect series instances sorted by z (positions+orientation), resample coronal (x,z) and sagittal (y,z) planes through crosshair. Use Instance::pixels raw 16-bit + spacing. Crosshair linked across panes (signal). Opens via context menu "3D → MPR" on series (aseriesmenu.cpp) / toolbar.
-- Volume memory: cap (e.g. 512×512×300 ≈ 750 MB int16 — use int16 raw, 2-byte = ~150MB max; guard by dims, downsample if bigger).
-- Scroll in MPR pane = move crosshair along its axis; window/level shared.
-
+## Stages remaining
 ### Stage 4 — Series arithmetic
-- Dialog: pick series A + series B + op (Add, Subtract A-B, Subtract B-A, Maximum, Minimum, Average; presets CT-CT (sub), CT-MRI (sub) with resample B→A grid (nearest, by position/orientation), formula bar: tokens A B + - * / min max avg, simple shunting-yard evaluator).
-- Result = new tab (synthesize a study/series header copy). imagepool: Loader has file→instance path; build in-memory instances via a new `PoolCompose` that creates Instance via friend/Loader hooks (Instance ctor protected — friend Loader; add friend Compose).
-- UI: Tools menu "Image arithmetic…".
-
+Dialog: series A + B + op (Add, Sub A-B, Sub B-A, Max, Min, Avg) + formula bar (tokens A B + - *
+/ min max avg, shunting-yard). Result = new tab. In-memory instances are the hard part:
+Instance ctor is friend-protected to Loader — add a `friend Compose` (imagepool/poolinstance.h)
++ a `PoolCompose` builder that copies series headers and injects raw pixel buffers.
+UI: Tools menu "Image arithmetic…".
 ### Stage 5 — Curved planar reformation (CPR)
-- Interactive centerline: in axial SeriesView, Shift+left-click adds control points (world mm) along vessel; spline (Catmull-Rom) through points; sample perpendicular to tangent in the plane normal (use orientation cosines + position path frame: parallel transport).
-- Result straightened image (columns=along-path, rows=cutline) shown as a new series tab. Toolbar toggle "CPR mode".
+Shift+click control points in axial view (world mm) → Catmull-Rom spline → parallel-transport
+frame from orientation cosines → sample cutline perpendicular to tangent → straightened image
+(path × cutline) as new series tab. Toolbar toggle "CPR mode".
 
 ## Conventions
-- Every stage: `make -j` clean, `make install`, smoke test (incl. a DICOM with multi-slice series — generate 32-slice CT-like volume in /tmp/testvol/ with pydicom, use as multi-instance test dataset), commit ("0.3: <stage>: <what>") + push. Update this file's checkboxes.
-- Update `project(aeskulap VERSION ...)` + About version at program end (0.3.0).
-- Tests: keep a Node-free shell test? Use `scripts/` dir: `test_smoke.sh` (launch, assert alive 8s, grep opened/new study/new series).
+- Every stage: `make -C build -j` clean → `cmake --install build` → `./tests/test_render.sh`
+  ALL PASS → GUI smoke (background=true, expect study+series loaded, alive, no CRITICALs) →
+  commit ("0.3: <stage>: <what>") + **push**. Update this file's status block.
+- `gtk_image_set_pixel_size` CRITICAL seen in old builds is FIXED in current tree; if it
+  reappears, a stock icon lookup regressed.
