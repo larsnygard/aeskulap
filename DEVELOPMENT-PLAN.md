@@ -2,7 +2,7 @@
 
 **Read-me-first handoff plan.** If your context is fresh, start here.
 
-## Status (updated 2026-11-06, HEAD = 92037997 pushed to origin/master)
+## Status (updated 2026-11-06, HEAD = fd85228f pushed to origin/master)
 - **Plan Stage 1 (quick wins) — DONE** (commits in `git log`, "0.3 stage2/…" labels): CT presets
   Bone W2000/C300, Soft tissue W350/C50, Brain W80/C40, Liver W150/C60 added to
   `add_default_presets_ct()` (configuration/aconfiguration.cpp); About dialog full programmatic
@@ -26,7 +26,27 @@
   - `tests/test_render.cpp` + `./tests/test_render.sh` — 25 headless checks, **ALL PASS**.
     (Test links against build/*.a — `make -C build` first; script does this.)
   - GUI smoke on DISPLAY=:0 with /tmp/testvol/: app runs, loads study/series, **zero GTK-CRITICALs**.
-- **Plan Stage 3 (MPR) — NOT STARTED. Design settled (do this):**
+- **Plan Stage 3 (MPR) — DONE** (commit fd85228f). Implemented:
+  - `Volume`: Axis enum, `set_center`, `plane(w,h)` cached resample (AXIS_Z raw; AXIS_Y coronal
+    w=width h=slices; AXIS_X sagittal w=height h=slices), `is_signed()`. Headless-tested in
+    tests/test_render.cpp (plane dims, content per axis, center follow) — ALL PASS.
+  - `widgets/mprview.{h,cpp}`: 3 Panes (Gtk::DrawingArea, nested class MPRView::Pane) render
+    plane via shared 65536*3 LUT (gray ramp signed-flip like legacy invert_lut_shape; palette
+    via Palette::build_lut); scroll=crosshair axis, left-drag=W/L, right-drag/press=crosshair.
+    Green crosshair + label overlays in cairo.
+  - StudyView: `m_mpr_button` ToggleToolButton 'MPR' in toolbar; content area is now
+    `m_content_notebook` (page 0 = tiler table, page 1 = MPRView, tabs hidden); on_mpr_toggled
+    builds MPRView from m_selected->volume() (ensure_volume; needs slices>=2; W/L from selected
+    display); delete on un-toggle. `SeriesView::volume()` accessor added.
+  - GUI smoke: 48-file dir loads (prescan progresses per file, 49 lines, study+series created,
+    app alive; 1 known stock-icon CRITICAL, pre-existing). NOTE: launching the app via a
+    backgrounded bash wrapper confuses pgrep -f (matches wrapper); use `pgrep -x aeskulap`.
+  - GUI MPR INTERACTION NOT YET CLICK-VERIFIED (no xdotool; ptrace_scope=1 blocks gdb/strace).
+    Click-testing MPR toggle is a stage-5 loose end; code compiles, plane math unit-tested.
+
+Old design notes:
+
+**Plan Stage 3 (MPR) — design notes:**
   1. Extend `Volume`: `enum Axis {AXIS_Z, AXIS_Y, AXIS_X}` (plane normal), `set_axis`,
      `set_center_x/y/z` (indices), cached `const guint16* plane(int &w, int &h)` — nearest-neighbor
      resample: AXIS_Z = raw slice (w=vol.w, h=vol.h, fixed z=center_z); AXIS_Y coronal
