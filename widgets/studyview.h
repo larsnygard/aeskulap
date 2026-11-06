@@ -55,6 +55,7 @@ namespace ImagePool {
 }
 
 class SeriesView;
+class MPRView;
 class SeriesLayoutToolButton;
 class ImageLayoutToolButton;
 
@@ -134,6 +135,8 @@ protected:
 
 	void sync_postproc_controls();
 
+	void on_mpr_toggled();
+
 	void on_doubleclick(SeriesView* s, Aeskulap::Display* d);
 
 	void add_series(const Glib::RefPtr<ImagePool::Series>& series);
@@ -172,6 +175,12 @@ private:
 	Aeskulap::WindowLevelToolButton* m_windowlevel;
 
 	Aeskulap::PostProcToolButton* m_postproc;
+
+	Gtk::ToggleToolButton* m_mpr_button;
+
+	Gtk::Notebook* m_content_notebook;
+
+	MPRView* m_mpr_view;
 
 	bool m_single_series;
 

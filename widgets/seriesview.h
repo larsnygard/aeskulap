@@ -104,6 +104,7 @@ public:
 
 	/** build/attach the shared volume for slab projection (lazy, on demand) */
 	void ensure_volume();
+	const Glib::RefPtr<Volume>& volume() { return m_volume; }
 	void set_slab(int n);
 	void set_projection(Volume::Projection p);
 	Volume::Projection projection() const;

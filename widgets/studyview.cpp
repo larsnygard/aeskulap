@@ -37,6 +37,7 @@
 #include "adisplay.h"
 #include "awindowleveltoolbutton.h"
 #include "apostproctoolbutton.h"
+#include "mprview.h"
 #include "avaluetool.h"
 
 #include "serieslayouttoolbutton.h"
@@ -174,7 +175,21 @@ m_draw_reference_frame_ends(false) {
 	m_postproc->show();
 	m_toolbar->append(*m_postproc);
 
-	hbox->pack_end(*m_table);
+	m_content_notebook = Gtk::manage(new Gtk::Notebook);
+	m_content_notebook->set_show_tabs(false);
+	m_content_notebook->set_show_border(false);
+	m_content_notebook->append_page(*m_table);
+	m_content_notebook->show();
+
+	m_mpr_button = Gtk::manage(new Gtk::ToggleToolButton("MPR"));
+	m_mpr_button->set_tooltip_text("Multiplanar reconstruction (axial / coronal / sagittal)");
+	m_mpr_button->signal_toggled().connect(sigc::mem_fun(*this, &StudyView::on_mpr_toggled));
+	m_mpr_button->show();
+	m_toolbar->append(*m_mpr_button);
+
+	m_mpr_view = NULL;
+
+	hbox->pack_end(*m_content_notebook);
 	hbox->pack_end(*m_toolbar_measure, false, false);
 
 	pack_end(*hbox);
@@ -370,6 +385,40 @@ void StudyView::on_series_selected(SeriesView* view, bool s) {
 	Glib::RefPtr<ImagePool::Series> series = m_selected->get_series();
 	m_windowlevel->set_modality(series->modality());
 	sync_postproc_controls();
+}
+
+
+void StudyView::on_mpr_toggled() {
+	if(m_mpr_button->get_active()) {
+		if(!m_selected) {
+			m_mpr_button->set_active(false);
+			return;
+		}
+		m_selected->ensure_volume();
+		Glib::RefPtr<Volume> vol = m_selected->volume();
+		if(!vol || vol->slices() < 2) {
+			m_mpr_button->set_active(false);
+			return;
+		}
+		int cx = vol->width() / 2;
+		int cy = vol->height() / 2;
+		int cz = vol->slices() / 2;
+		Aeskulap::Display* d = m_selected->get_selected_display();
+		int wc = d ? d->get_windowlevel().center : 40;
+		int ww = d ? d->get_windowlevel().width : 400;
+		m_mpr_view = new MPRView(vol, cx, cy, cz, wc, ww);
+		m_content_notebook->append_page(*m_mpr_view);
+		m_mpr_view->show_all();
+		m_content_notebook->set_current_page(1);
+	}
+	else {
+		if(m_mpr_view) {
+			m_content_notebook->remove_page(1);
+			delete m_mpr_view;
+			m_mpr_view = NULL;
+		}
+		m_content_notebook->set_current_page(0);
+	}
 }
 
 void StudyView::sync_postproc_controls() {

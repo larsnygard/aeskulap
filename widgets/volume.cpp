@@ -14,6 +14,12 @@
 #include <cmath>
 #include <cstring>
 
+static inline int clampi_range_local(int v, int lo, int hi) {
+	if(v < lo) return lo;
+	if(v > hi) return hi;
+	return v;
+}
+
 Volume::Volume() :
 m_w(0),
 m_h(0),
@@ -21,7 +27,10 @@ m_slab(1),
 m_proj(Volume::PASS),
 m_kernel(Aeskulap::Kernel::IDENTITY),
 m_revision(1),
-m_signed(false) {
+m_signed(false),
+m_axis(Volume::AXIS_Z),
+m_cx(0), m_cy(0), m_cz(0),
+m_plane_rev(0) {
 }
 
 Glib::RefPtr<Volume> Volume::create() {
@@ -223,4 +232,67 @@ Glib::RefPtr<Volume> Volume::from_series(const Glib::RefPtr<ImagePool::Series>& 
 	}
 	vol->set_description(series->description());
 	return vol;
+}
+
+void Volume::set_center(int x, int y, int z) {
+	int nx = clampi_range_local(x, 0, m_w ? m_w - 1 : 0);
+	int ny = clampi_range_local(y, 0, m_h ? m_h - 1 : 0);
+	int nz = clampi_range_local(z, 0, slices() ? slices() - 1 : 0);
+	if(nx == m_cx && ny == m_cy && nz == m_cz) {
+		return;
+	}
+	m_cx = nx; m_cy = ny; m_cz = nz;
+	m_revision++;
+}
+
+const guint16* Volume::plane(int& w, int& h) {
+	if(m_raw.empty() || m_w == 0 || m_h == 0) {
+		w = h = 0;
+		return NULL;
+	}
+	int pw = m_w, ph = m_h;
+	switch(m_axis) {
+		case AXIS_Y: ph = slices(); break;
+		case AXIS_X: pw = m_h; ph = slices(); break;
+		default: break;
+	}
+	// rebuild only when geometry/state changed
+	if(m_plane_rev != m_revision || (int)m_plane_cache.size() != pw * ph) {
+		m_plane_cache.resize((size_t)pw * ph);
+		if(m_axis == AXIS_Z) {
+			int z = clampi_range_local(m_cz, 0, slices() - 1);
+			const guint16* src = raw_slice(z);
+			if(src) {
+				std::memcpy(&m_plane_cache[0], src, (size_t)m_w * m_h * sizeof(guint16));
+			}
+		}
+		else if(m_axis == AXIS_Y) {
+			// coronal: out(x, k) = vol(x, m_cy, k)
+			int y = clampi_range_local(m_cy, 0, m_h - 1);
+			for(int k = 0; k < slices(); k++) {
+				const guint16* sl = raw_slice(k);
+				if(!sl) continue;
+				for(int x = 0; x < m_w; x++) {
+					m_plane_cache[(size_t)k * m_w + x] = sl[(size_t)y * m_w + x];
+				}
+			}
+		}
+		else {
+			// sagittal: plane(row k, col y) = vol(m_cx, y, k); pw = m_h
+			int x = clampi_range_local(m_cx, 0, m_w - 1);
+			for(int k = 0; k < slices(); k++) {
+				const guint16* sl = raw_slice(k);
+				if(!sl) continue;
+				for(int y = 0; y < m_h; y++) {
+					m_plane_cache[(size_t)k * m_h + y] = sl[(size_t)y * m_w + x];
+				}
+			}
+		}
+		// kernels run signed-domain over slices; on the plane the geometry
+		// differs, so kernel is applied only in project(); planes raw.
+		m_plane_rev = m_revision;
+	}
+	w = pw;
+	h = ph;
+	return &m_plane_cache[0];
 }

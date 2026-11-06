@@ -129,6 +129,42 @@ int main() {
 		CHECK(lut[126*3] == 255, "window ceiling: above ramp white");
 	}
 
+
+	// ---- MPR planes ----
+	{
+		Glib::RefPtr<Volume> vol = Volume::create();
+		for(int s = 0; s < 4; s++) {
+			std::vector<guint16> sl(16, (guint16)((s+1)*10));
+			vol->append_slice(&sl[0], 4, 4, s * 2.0, Glib::RefPtr<ImagePool::Instance>());
+		}
+		vol->set_center(0, 2, 1);
+		int w = 0, h = 0;
+
+		vol->set_axis(Volume::AXIS_Z);
+		const guint16* p = vol->plane(w, h);
+		CHECK(p && w == 4 && h == 4, "AXIS_Z plane 4x4");
+		CHECK(p && p[0] == 20, "AXIS_Z plane = slice cz=1 (20)");
+
+		vol->set_axis(Volume::AXIS_Y);
+		p = vol->plane(w, h);
+		CHECK(p && w == 4 && h == 4, "AXIS_Y coronal plane w=width h=slices");
+		// coronal row k = slice k at row cy=2: all pixels value (k+1)*10
+		CHECK(p && p[0*4+1] == 10 && p[2*4+3] == 30 && p[3*4+0] == 40,
+		      "AXIS_Y rows follow slice index (10/30/40)");
+
+		vol->set_axis(Volume::AXIS_X);
+		p = vol->plane(w, h);
+		CHECK(p && w == 4 && h == 4, "AXIS_X sagittal plane w=height h=slices");
+		CHECK(p && p[0*4+0] == 10 && p[3*4+3] == 40,
+		      "AXIS_X rows follow slice index (10..40)");
+
+		// moving center bumps revision -> plane rebuilds (AXIS_Z follows cz)
+		vol->set_axis(Volume::AXIS_Z);
+		vol->set_center(0, 2, 3);
+		p = vol->plane(w, h);
+		CHECK(p && p[5] == 40, "AXIS_Z plane follows set_center cz=3 (40)");
+	}
+
 	printf(failures ? "FAILED: %d\n" : "ALL PASS: %d\n", failures);
 	return failures ? 1 : 0;
 }

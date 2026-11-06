@@ -70,6 +70,8 @@ public:
 	void set_kernel(int id);
 	int kernel() const { return m_kernel; }
 
+	bool is_signed() const { return m_signed; }
+
 	const guint16* raw_slice(int i) const {
 		return (i < 0 || i >= slices() || m_raw.empty()) ? NULL : &m_raw[(size_t)i * m_w * m_h];
 	}
@@ -85,6 +87,24 @@ public:
 	 * (resized). slab<=1 or PASS: just the (kerneld) center slice.
 	 */
 	void project(int center, std::vector<guint16>& out) const;
+
+	// ---- MPR: orthogonal planes through a crosshair ----
+	enum Axis { AXIS_Z = 0, AXIS_Y, AXIS_X };  // plane normal
+
+	void set_axis(Axis a) { if(a != m_axis) { m_axis = a; m_revision++; } }
+	Axis axis() const { return m_axis; }
+
+	void set_center(int x, int y, int z);
+	void center(int& x, int& y, int& z) const { x = m_cx; y = m_cy; z = m_cz; }
+
+	/**
+	 * Nearest-neighbor orthogonal resample through the crosshair.
+	 * AXIS_Z: raw slice (w=width, h=height, row z=m_cz).
+	 * AXIS_Y: coronal (w=width, h=slices, row = slice index).
+	 * AXIS_X: sagittal (w=height, h=slices, row = slice index).
+	 * Returns the cached plane (NULL while invalid); w/h out params.
+	 */
+	const guint16* plane(int& w, int& h);
 
 	/** build a volume from all 16-bit instances of a series (z-sorted) */
 	static Glib::RefPtr<Volume> from_series(const Glib::RefPtr<ImagePool::Series>& series);
@@ -107,6 +127,12 @@ protected:
 	guint64 m_revision;
 	bool m_signed;   // pixels are two's-complement (CT HU)
 	std::string m_description;
+
+	// MPR state
+	Axis m_axis;
+	int m_cx, m_cy, m_cz;
+	std::vector<guint16> m_plane_cache;
+	guint64 m_plane_rev;
 };
 
 #endif // AESKULAP_VOLUME_H
