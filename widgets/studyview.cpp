@@ -36,6 +36,7 @@
 #include "astockids.h"
 #include "adisplay.h"
 #include "awindowleveltoolbutton.h"
+#include "apostproctoolbutton.h"
 #include "avaluetool.h"
 
 #include "serieslayouttoolbutton.h"
@@ -165,6 +166,13 @@ m_draw_reference_frame_ends(false) {
 	m_windowlevel->signal_windowlevel_invert.connect(sigc::mem_fun(*this, &StudyView::on_windowlevel_invert));
 	m_windowlevel->show();
 	m_toolbar->append(*m_windowlevel);
+
+	m_postproc = Gtk::manage(new Aeskulap::PostProcToolButton);
+	m_postproc->signal_palette_changed.connect(sigc::mem_fun(*this, &StudyView::on_palette_changed));
+	m_postproc->signal_kernel_changed.connect(sigc::mem_fun(*this, &StudyView::on_kernel_changed));
+	m_postproc->signal_projection_changed.connect(sigc::mem_fun(*this, &StudyView::on_projection_changed));
+	m_postproc->show();
+	m_toolbar->append(*m_postproc);
 
 	hbox->pack_end(*m_table);
 	hbox->pack_end(*m_toolbar_measure, false, false);
@@ -361,6 +369,39 @@ void StudyView::on_series_selected(SeriesView* view, bool s) {
 	
 	Glib::RefPtr<ImagePool::Series> series = m_selected->get_series();
 	m_windowlevel->set_modality(series->modality());
+	sync_postproc_controls();
+}
+
+void StudyView::sync_postproc_controls() {
+	if(!m_postproc) {
+		return;
+	}
+	if(m_selected) {
+		m_postproc->set_palette(m_selected->palette());
+		m_postproc->set_kernel(m_selected->kernel());
+		m_postproc->set_projection((int)m_selected->projection());
+		m_postproc->set_enabled_state(true);
+	} else {
+		m_postproc->set_enabled_state(false);
+	}
+}
+
+void StudyView::on_palette_changed(int id) {
+	if(m_selected) {
+		m_selected->set_palette(id);
+	}
+}
+
+void StudyView::on_kernel_changed(int id) {
+	if(m_selected) {
+		m_selected->set_kernel(id);
+	}
+}
+
+void StudyView::on_projection_changed(int id) {
+	if(m_selected) {
+		m_selected->set_projection((Volume::Projection)id);
+	}
 }
 
 void StudyView::draw_reference(Aeskulap::Display* display, const Glib::RefPtr<ImagePool::Instance>& instance) {

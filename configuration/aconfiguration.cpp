@@ -55,6 +55,11 @@ void Configuration::add_default_presets_ct() {
 	set_windowlevel(WindowLevel(gettext("Mediastinum"), "CT", 50, 450));
 	set_windowlevel(WindowLevel(gettext("Spine"), "CT", 40, 300));
 	set_windowlevel(WindowLevel(gettext("Vertebrae"), "CT", 530, 2300));
+	// 2026 fork: common named presets
+	set_windowlevel(WindowLevel(gettext("Bone"), "CT", 300, 2000));
+	set_windowlevel(WindowLevel(gettext("Soft tissue"), "CT", 50, 350));
+	set_windowlevel(WindowLevel(gettext("Brain"), "CT", 40, 80));
+	set_windowlevel(WindowLevel(gettext("Liver"), "CT", 60, 150));
 }
 
 Glib::ustring Configuration::get_name_from_path(const Glib::ustring& path) {

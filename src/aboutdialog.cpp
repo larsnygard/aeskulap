@@ -29,6 +29,7 @@
 */
 
 #include "aboutdialog.h"
+#include "gettext.h"
 #include "aiconfactory.h"
 #include "config.h"
 
@@ -45,6 +46,22 @@ m_refGlade(refGlade) {
 #endif
 
 	set_version(VERSION);
+
+	// 2026 fork: full programmatic info (license, authors, website)
+	set_program_name("Aeskulap");
+	set_comments(gettext("DICOM image viewer and PACS client.\n"
+	                     "Fast, lightweight, built on gtkmm and DCMTK."));
+	set_copyright(gettext("Copyright \u00a9 2005 Alexander Pipelka\n"
+	                      "Copyright \u00a9 2026 Lars Christian Nyg\u00e5rd (0.2.9 fork)"));
+	set_license_type(Gtk::LICENSE_GPL_2_0);
+	set_website("https://github.com/larsnygard/aeskulap");
+	set_website_label("github.com/larsnygard/aeskulap");
+	set_authors({
+		"Alexander Pipelka <pipelka@teleweb.at>",
+		"Lars Christian Nyg\u00e5rd <lars@snart.com>"
+	});
+	set_documenters({"The Aeskulap project"});
+	set_translator_credits(gettext("translator-credits"));
 }
 
 AboutDialog::~AboutDialog() {

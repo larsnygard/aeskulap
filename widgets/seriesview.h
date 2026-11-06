@@ -107,6 +107,11 @@ public:
 	void set_slab(int n);
 	void set_projection(Volume::Projection p);
 	Volume::Projection projection() const;
+	void set_kernel(int id);
+	int kernel() const;
+	void set_palette(int id);
+	int palette() const;
+	void set_invert(bool inv);
 
 protected:
 

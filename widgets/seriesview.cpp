@@ -359,6 +359,42 @@ Volume::Projection SeriesView::projection() const {
 	return m_volume ? m_volume->projection() : Volume::PASS;
 }
 
+void SeriesView::set_kernel(int id) {
+	ensure_volume();
+	if(m_volume) {
+		m_volume->set_kernel(id);
+	}
+	refresh(false);
+	schedule_repaint(1000);
+}
+
+int SeriesView::kernel() const {
+	return m_volume ? m_volume->kernel() : 0;
+}
+
+void SeriesView::set_palette(int id) {
+	for(unsigned int i = 0; i < m_dispparam.size(); i++) {
+		m_dispparam[i]->palette = id;
+	}
+	refresh(false);
+	schedule_repaint(1000);
+}
+
+int SeriesView::palette() const {
+	if(m_dispparam.empty()) {
+		return 0;
+	}
+	return m_dispparam[0]->palette;
+}
+
+void SeriesView::set_invert(bool inv) {
+	for(unsigned int i = 0; i < m_dispparam.size(); i++) {
+		m_dispparam[i]->inverted = inv;
+	}
+	refresh(false);
+	schedule_repaint(1000);
+}
+
 void SeriesView::apply_changes(const Glib::RefPtr<DisplayParameters>& param) {
 	for(unsigned int i = 0; i < m_dispparam.size(); i++) {
 		m_dispparam[i]->copy(param);

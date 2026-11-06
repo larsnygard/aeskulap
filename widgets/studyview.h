@@ -44,6 +44,7 @@
 
 namespace Aeskulap {
 	class Display;
+	class PostProcToolButton;
 	class WindowLevelToolButton;
 	class ValueTool;
 }
@@ -125,6 +126,14 @@ protected:
 
 	void on_windowlevel_invert(bool invert);
 
+	void on_palette_changed(int id);
+
+	void on_kernel_changed(int id);
+
+	void on_projection_changed(int id);
+
+	void sync_postproc_controls();
+
 	void on_doubleclick(SeriesView* s, Aeskulap::Display* d);
 
 	void add_series(const Glib::RefPtr<ImagePool::Series>& series);
@@ -161,6 +170,8 @@ private:
 	Gtk::ToggleToolButton* m_measure;
 
 	Aeskulap::WindowLevelToolButton* m_windowlevel;
+
+	Aeskulap::PostProcToolButton* m_postproc;
 
 	bool m_single_series;
 
