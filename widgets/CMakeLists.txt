@@ -13,9 +13,11 @@ target_include_directories(aeskulap-widgets PUBLIC
   ${GTKMM_INCLUDE_DIRS}
 )
 
-target_compile_options(aeskulap-widgets PRIVATE -w -include ${CMAKE_SOURCE_DIR}/imagepool/compat.h)
+target_compile_options(aeskulap-widgets PRIVATE
+  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-w -include ${CMAKE_SOURCE_DIR}/imagepool/compat.h>
+  $<$<CXX_COMPILER_ID:MSVC>:/W0 /utf-8>)
 
 target_link_libraries(aeskulap-widgets PUBLIC
   imagepool aeskulap-config
-  ${GTKMM_LIBRARIES} ${DCMTK_LIBRARIES}
+  ${GTKMM_LIBRARIES} ${DCMTK_LIBS}
 )

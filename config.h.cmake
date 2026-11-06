@@ -4,8 +4,8 @@
 
 #define PACKAGE "aeskulap"
 #define PACKAGE_NAME "Aeskulap"
-#define PACKAGE_VERSION "0.2.9"
-#define VERSION "0.2.9"
+#define PACKAGE_VERSION "0.3.0"
+#define VERSION "0.3.0"
 #define GETTEXT_PACKAGE "aeskulap"
 
 #cmakedefine ENABLE_NLS 1

@@ -15,7 +15,15 @@ set(aeskulap_SOURCES
   seriesmath.cpp
 )
 
+if(WIN32)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/aeskulap.rc.in ${CMAKE_CURRENT_BINARY_DIR}/aeskulap.rc @ONLY)
+  list(APPEND aeskulap_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/aeskulap.rc)
+endif()
+
 add_executable(aeskulap ${aeskulap_SOURCES})
+if(WIN32)
+  set_target_properties(aeskulap PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
 
 target_include_directories(aeskulap PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
@@ -27,14 +35,16 @@ target_include_directories(aeskulap PRIVATE
   ${DCMTK_INCLUDE_DIRS}
 )
 
-target_compile_options(aeskulap PRIVATE -w)
+target_compile_options(aeskulap PRIVATE
+  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-w>
+  $<$<CXX_COMPILER_ID:MSVC>:/W0 /utf-8>)
 
 target_link_libraries(aeskulap PRIVATE
   aeskulap-widgets
   imagepool
   aeskulap-config
   ${GTKMM_LIBRARIES}
-  ${DCMTK_LIBRARIES}
+  ${DCMTK_LIBS}
   Threads::Threads
 )
 

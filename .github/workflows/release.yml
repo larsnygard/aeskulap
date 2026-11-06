@@ -1,0 +1,154 @@
+name: release
+# Windows (MSYS2 UCRT64 portable zip) + Linux (portable tar.gz) binaries.
+# Tags v* publish a GitHub Release; pushes/PRs build + test as a gate.
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+  pull_request:
+
+env:
+  DCMTK_VERSION: 3.7.1
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-gtkmm3
+            mingw-w64-ucrt-x86_64-dcmtk
+            mingw-w64-ucrt-x86_64-zlib
+            mingw-w64-ucrt-x86_64-libpng
+            mingw-w64-ucrt-x86_64-libtiff
+            mingw-w64-ucrt-x86_64-openssl
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Tests (headless logic gate)
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Smoke - exe links
+        run: |
+          if ldd build/src/aeskulap.exe | grep -iq "not found"; then
+            ldd build/src/aeskulap.exe | grep -i "not found"
+            exit 1
+          fi
+
+      - name: Bundle (portable bin + share + GTK runtime)
+        run: bash scripts/bundle-windows.sh build bundle
+
+      - name: Zip
+        run: 7z a -tzip aeskulap-0.3.0-windows-x64-portable.zip bundle/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aeskulap-windows-x64
+          path: aeskulap-0.3.0-windows-x64-portable.zip
+
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependencies (gtkmm3 stack + build tools)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build pkg-config \
+            libgtkmm-3.0-dev libxml2-utils \
+            zlib1g-dev libpng-dev libtiff-dev libjpeg-dev libssl-dev
+
+      - name: Cache DCMTK
+        uses: actions/cache@v4
+        with:
+          path: /tmp/dcmtk-installed
+          key: dcmtk-${{ env.DCMTK_VERSION }}-noble-v2
+
+      - name: Build DCMTK (shared; same 3.7.1 as MSYS2)
+        run: |
+          if [ -f /tmp/dcmtk-installed/lib/libdcmdata.so.21 ]; then
+            sudo cp -r /tmp/dcmtk-installed/* /usr/local/
+          else
+            curl -fLO https://dicom.offis.de/download/dcmtk/dcmtk371/dcmtk-${{ env.DCMTK_VERSION }}.tar.gz
+            tar xzf dcmtk-${{ env.DCMTK_VERSION }}.tar.gz
+            cmake -S dcmtk-${{ env.DCMTK_VERSION }} -B dcmtk-build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
+              -DCMAKE_INSTALL_PREFIX=/usr/local -DBUILD_APPS=OFF \
+              -DWITH_LIBXML=OFF -DWITH_ZLIB=ON -DWITH_OPENSSL=ON
+            cmake --build dcmtk-build -j
+            sudo cmake --install dcmtk-build
+            sudo mkdir -p /tmp/dcmtk-installed
+            sudo cp -r /usr/local/lib /tmp/dcmtk-installed/lib
+          fi
+          echo /usr/local/lib | sudo tee /etc/ld.so.conf.d/dcmtk.conf >/dev/null
+          sudo ldconfig
+          sudo mkdir -p /usr/local/lib/pkgconfig
+          { echo "prefix=/usr/local"; echo "libdir=\${prefix}/lib"; echo "includedir=\${prefix}/include"; \
+            echo "Name: DCMTK"; echo "Description: DICOM Toolkit"; echo "Version: ${{ env.DCMTK_VERSION }}"; \
+            echo "Cflags: -I\${includedir}"; \
+            echo "Libs: -L\${libdir} -lofstd -loflog -ldcmdata -ldcmimgle -ldcmimage -ldcmjpeg -ldcmnet -ldcmtls"; } | sudo tee /usr/local/lib/pkgconfig/dcmtk.pc >/dev/null
+          sudo ldconfig
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Tests (headless logic gate)
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Bundle portable tree (app + libs + launcher)
+        run: |
+          ./scripts/bundle-linux.sh build aeskulap-0.3.0-linux-x64 /usr/local
+          tar czf aeskulap-0.3.0-linux-x64-portable.tar.gz aeskulap-0.3.0-linux-x64
+
+      - name: Smoke - bundle starts under Xvfb
+        run: |
+          sudo apt-get install -y --no-install-recommends xvfb
+          timeout 30 xvfb-run -a ./aeskulap-0.3.0-linux-x64/bin/aeskulap.sh; rc=$?
+          # 124 = timeout with the window still open = good; 0 clean exit OK;
+          # 139 segfault / other crashes = fail
+          if [ $rc -gt 124 ] || [ $rc -eq 139 ] || [ $rc -eq 134 ]; then
+            echo "smoke failed rc=$rc"; exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aeskulap-linux-x64
+          path: aeskulap-0.3.0-linux-x64-portable.tar.gz
+
+  release:
+    needs: [windows, linux]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: aeskulap-*
+          merge-multiple: true
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            aeskulap-0.3.0-windows-x64-portable.zip
+            aeskulap-0.3.0-linux-x64-portable.tar.gz

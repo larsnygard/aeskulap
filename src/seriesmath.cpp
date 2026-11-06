@@ -8,7 +8,7 @@
 
 #include <cstring>
 #include <algorithm>
-#include <sys/stat.h>
+#include <glibmm.h>   // g_mkdir_with_parents (portable)
 
 namespace Aeskulap {
 
@@ -153,7 +153,7 @@ SeriesMath::Result SeriesMath::subtract(
     if(suid.empty() || sseries.empty()) {
         return res;
     }
-    mkdir(outdir.c_str(), 0755);
+    g_mkdir_with_parents(outdir.c_str(), 0755);
 
     for(size_t i = 0; i < n; i++) {
         std::vector<gint32> pa, pb;
@@ -203,7 +203,7 @@ SeriesMath::Result SeriesMath::maximum_intensity_project(
     if(suid.empty() || sseries.empty()) {
         return res;
     }
-    mkdir(outdir.c_str(), 0755);
+    g_mkdir_with_parents(outdir.c_str(), 0755);
 
     // first frame defines the grid
     std::vector<gint32> first;

@@ -83,7 +83,7 @@ int main()
 	}
 
 	// ---- MIP: frames 10, 20, 30 -> 30 everywhere ----
-	char mipdir[] = "/tmp/aesk-mip-XXXXXX";
+	std::string mipdir = Glib::build_filename(Glib::get_tmp_dir(), "aesk-mip-test"); g_mkdir_with_parents(mipdir.c_str(), 0755);
 	{
 		std::vector<Glib::RefPtr<ImagePool::Instance> > a;
 		a.push_back(make_instance(4, 4, 10));
@@ -93,14 +93,14 @@ int main()
 			a, mipdir, "1.2.3.4.5.10", "1.2.3.4.5.10.99", "test MIP");
 		CHECK(r.frames == 1 && r.width == 4 && r.height == 4, "MIP 1 frame 4x4");
 		int w = 0, h = 0;
-		std::string p = std::string(mipdir) + "/mip0001.dcm";
+		std::string p = mipdir + "/mip0001.dcm";
 		int v = read_first_pixel(p, &w, &h);
 		CHECK(w == 4 && h == 4, "MIP file dims 4x4");
 		CHECK(v == 30, "MIP pixel = max(10,20,30) = 30");
 	}
 
 	// ---- Sub: 50 - 30 = 20 (and 30-50 = -20, signed domain) ----
-	char subdir[] = "/tmp/aesk-sub-XXXXXX";
+	std::string subdir = Glib::build_filename(Glib::get_tmp_dir(), "aesk-sub-test"); g_mkdir_with_parents(subdir.c_str(), 0755);
 	{
 		std::vector<Glib::RefPtr<ImagePool::Instance> > a, b;
 		a.push_back(make_instance(4, 4, 50));
@@ -109,7 +109,7 @@ int main()
 			a, b, subdir, "1.2.3.4.5.10", "1.2.3.4.5.10.98", "test SUB");
 		CHECK(r.frames == 1, "SUB 1 frame");
 		int w = 0, h = 0;
-		std::string p = std::string(subdir) + "/sub0001.dcm";
+		std::string p = subdir + "/sub0001.dcm";
 		int v = read_first_pixel(p, &w, &h);
 		CHECK(v == 20, "SUB pixel = 50-30 = 20");
 

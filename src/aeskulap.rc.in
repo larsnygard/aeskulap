@@ -1,0 +1,4 @@
+// aeskulap 0.3 — Windows application resources (generated: absolute paths).
+#define IDI_ICON1 101
+IDI_ICON1 ICON "@CMAKE_SOURCE_DIR@/pixmaps/aeskulap.ico"
+1 24 "@CMAKE_CURRENT_SOURCE_DIR@/aeskulap.manifest"

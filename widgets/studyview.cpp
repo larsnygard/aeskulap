@@ -42,6 +42,24 @@
 #include "cpr.h"
 #include <dcmtk/dcmdata/dcuid.h>
 #include <cstdlib>
+#include <ctime>
+
+// Portable mkdtemp(3) replacement (Windows has no mkdtemp).
+static std::string aesk_mkdtemp(const char* prefix) {
+	Glib::ustring base = Glib::build_filename(Glib::get_tmp_dir(), "aeskulap");
+	g_mkdir_with_parents(base.c_str(), 0755);
+	for(int i = 0; i < 100; i++) {
+		Glib::ustring dir = Glib::ustring::compose("%1/%2-%3", base, prefix,
+		                                           Glib::ustring::compose("%1", (long)time(NULL) * 100 + i));
+		if(Glib::file_test(dir, Glib::FILE_TEST_EXISTS)) {
+			continue;
+		}
+		if(g_mkdir_with_parents(dir.c_str(), 0700) == 0) {
+			return dir;
+		}
+	}
+	return std::string();
+}
 #include "avaluetool.h"
 
 #include "serieslayouttoolbutton.h"
@@ -476,9 +494,8 @@ void StudyView::series_mip() {
 	if(v.size() < 2) {
 		return;
 	}
-	char outdir[512];
-	snprintf(outdir, sizeof(outdir), "/tmp/aeskulap-mip-XXXXXX");
-	if(!mkdtemp(outdir)) {
+	std::string outdir = aesk_mkdtemp("mip");
+	if(outdir.empty()) {
 		return;
 	}
 	char suid[64];
@@ -492,7 +509,7 @@ void StudyView::series_mip() {
 	std::list<Glib::ustring> files;
 	for(int i = 1; i <= r.frames; i++) {
 		char name[600];
-		snprintf(name, sizeof(name), "%s/mip%04d.dcm", outdir, i);
+		snprintf(name, sizeof(name), "%s/mip%04d.dcm", outdir.c_str(), i);
 		files.push_back(name);
 	}
 	main_window_load_files(files);
@@ -526,9 +543,8 @@ void StudyView::series_subtract() {
 		return;
 	}
 	std::vector<Glib::RefPtr<ImagePool::Instance> > b = inst_vector(other);
-	char outdir[512];
-	snprintf(outdir, sizeof(outdir), "/tmp/aeskulap-sub-XXXXXX");
-	if(!mkdtemp(outdir)) {
+	std::string outdir = aesk_mkdtemp("sub");
+	if(outdir.empty()) {
 		return;
 	}
 	char suid[64];
@@ -542,7 +558,7 @@ void StudyView::series_subtract() {
 	std::list<Glib::ustring> files;
 	for(int i = 1; i <= r.frames; i++) {
 		char name[600];
-		snprintf(name, sizeof(name), "%s/sub%04d.dcm", outdir, i);
+		snprintf(name, sizeof(name), "%s/sub%04d.dcm", outdir.c_str(), i);
 		files.push_back(name);
 	}
 	main_window_load_files(files);
@@ -572,15 +588,14 @@ void StudyView::on_cpr_compute() {
 	if(Cpr::reformat(vol, pts, out, w, h) < 1) {
 		return;
 	}
-	char outdir[512];
-	snprintf(outdir, sizeof(outdir), "/tmp/aeskulap-cpr-XXXXXX");
-	if(!mkdtemp(outdir)) {
+	std::string outdir = aesk_mkdtemp("cpr");
+	if(outdir.empty()) {
 		return;
 	}
 	char suid[64];
 	dcmGenerateUniqueIdentifier(suid, SITE_SERIES_UID_ROOT);
 	char name[600];
-	snprintf(name, sizeof(name), "%s/cpr0001.dcm", outdir);
+	snprintf(name, sizeof(name), "%s/cpr0001.dcm", outdir.c_str());
 	if(!Aeskulap::SeriesMath::write_sc(out, w, h, name,
 	                                   m_study->studyinstanceuid(), suid,
 	                                   std::string(vol->description()) + " CPR", 0, 1)) {

@@ -24,12 +24,14 @@ target_include_directories(imagepool PUBLIC
   ${GTKMM_INCLUDE_DIRS}
 )
 
-target_compile_options(imagepool PRIVATE -w -include ${CMAKE_CURRENT_SOURCE_DIR}/compat.h)
+target_compile_options(imagepool PRIVATE
+  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-w -include ${CMAKE_CURRENT_SOURCE_DIR}/compat.h>
+  $<$<CXX_COMPILER_ID:MSVC>:/W0 /utf-8>)
 
 target_include_directories(imagepool PUBLIC ${CMAKE_BINARY_DIR}/include)
 
 target_link_libraries(imagepool PUBLIC
-  ${DCMTK_LIBRARIES}
+  ${DCMTK_LIBS}
   ${GTKMM_LIBRARIES}
   JPEG::JPEG TIFF::TIFF PNG::PNG ZLIB::ZLIB OpenSSL::Crypto OpenSSL::SSL
   Threads::Threads

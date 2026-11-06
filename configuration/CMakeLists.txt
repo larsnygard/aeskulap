@@ -10,6 +10,8 @@ target_include_directories(aeskulap-config PUBLIC
   ${GTKMM_INCLUDE_DIRS}
 )
 
-target_compile_options(aeskulap-config PRIVATE -w)
+target_compile_options(aeskulap-config PRIVATE
+  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-w>
+  $<$<CXX_COMPILER_ID:MSVC>:/W0 /utf-8>)
 
 target_link_libraries(aeskulap-config PUBLIC ${GTKMM_LIBRARIES})

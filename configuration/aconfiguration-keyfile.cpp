@@ -19,7 +19,7 @@
 
 #include <cstdio>
 #include <iostream>
-#include <sys/stat.h>
+#include <glibmm.h>
 #include <sys/types.h>
 
 namespace Aeskulap {
@@ -40,7 +40,7 @@ public:
     Glib::ustring path = config_path();
     Glib::ustring dir = Glib::path_get_dirname(path);
     if (!Glib::file_test(dir, Glib::FILE_TEST_EXISTS)) {
-      ::mkdir(dir.c_str(), 0755);
+      g_mkdir_with_parents(dir.c_str(), 0755);
     }
     try {
       kf.load_from_file(path);
